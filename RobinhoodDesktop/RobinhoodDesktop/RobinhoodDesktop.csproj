@@ -63,7 +63,6 @@
     <Compile Include="StockChart.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StockLinePlot.cs" />
     <EmbeddedResource Include="HomePage\HomePageForm.resx">
       <DependentUpon>HomePageForm.cs</DependentUpon>
     </EmbeddedResource>

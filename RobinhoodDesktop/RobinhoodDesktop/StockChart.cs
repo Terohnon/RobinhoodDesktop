@@ -92,8 +92,8 @@ namespace RobinhoodDesktop
             priceLine.DataSource = Source;
 
             // Set the initial view of the data to the last trading day
-            tradeAxis.WorldMax = (double)((DateTime)data.Rows[data.Rows.Count - 1][TIME_DATA_TAG]).Date.Ticks;
-            tradeAxis.WorldMin = (double)((DateTime)data.Rows[data.Rows.Count - 1][TIME_DATA_TAG]).Date.AddHours(-12).Ticks;
+            tradeAxis.WorldMax = (double)((DateTime)data.Rows[data.Rows.Count - 1][TIME_DATA_TAG]).Date.AddHours(16).Ticks;
+            tradeAxis.WorldMin = tradeAxis.SparseWorldAdd((double)(new DateTime((long)tradeAxis.WorldMax)).Ticks, -(tradeAxis.EndTradingTime - tradeAxis.StartTradingTime).Ticks * 1.5);
 
             // Create a data table which acts as a reference point for each day
             DailyData = new DataTable();
@@ -230,6 +230,14 @@ namespace RobinhoodDesktop
                 return false;
             }
 
+            /// <summary>
+            /// Handles a move move event
+            /// </summary>
+            /// <param name="X">The X mouse coordinate</param>
+            /// <param name="Y">The Y mouse coordinate</param>
+            /// <param name="keys">The mouse buttons that are pressed</param>
+            /// <param name="ps">The plot surface the mouse is moving over</param>
+            /// <returns></returns>
             public override bool DoMouseMove(int X, int Y, Modifier keys, InteractivePlotSurface2D ps)
             {
                 DateTime time = new DateTime((long)Chart.stockPricePlot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false));
@@ -261,6 +269,36 @@ namespace RobinhoodDesktop
                     // Refresh the canvas to display the updated lines
                     Chart.stockPricePlot.Canvas.Refresh();
                 }
+                return false;
+            }
+
+            /// <summary>
+            /// Handles a mouse scroll wheel event
+            /// </summary>
+            /// <param name="X">The X coordinate of the mouse</param>
+            /// <param name="Y">The Y coordinate of the mouse</param>
+            /// <param name="direction">The mouse wheel movement</param>
+            /// <param name="keys">The mouse buttons that are pressed</param>
+            /// <param name="ps">The plot surface the mouse is scrolling over</param>
+            /// <returns></returns>
+            public override bool DoMouseScroll(int X, int Y, int direction, Modifier keys, InteractivePlotSurface2D ps)
+            {
+                double percentChange = ((direction > 0) ? (1 / 1.2) : (1.2));
+                DateTime anchor = new DateTime((long)Chart.stockPricePlot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false));
+                int anchorIdx = Chart.GetTimeIndex(anchor);
+                int minIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin));
+                int maxIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax));
+                minIdx = anchorIdx + (int)Math.Round((minIdx - anchorIdx) * percentChange);
+                maxIdx = anchorIdx + (int)Math.Round((maxIdx - anchorIdx) * percentChange);
+                minIdx = Math.Max(minIdx, 0);
+                maxIdx = Math.Min(maxIdx, Chart.Source.Rows.Count - 1);
+                Chart.stockPricePlot.XAxis1.WorldMin = (double)((DateTime)Chart.Source.Rows[minIdx][TIME_DATA_TAG]).Ticks;
+                Chart.stockPricePlot.XAxis1.WorldMax = (double)((DateTime)Chart.Source.Rows[maxIdx][TIME_DATA_TAG]).Ticks;
+                //Chart.stockPricePlot.XAxis1.WorldMax = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax) - anchor).Ticks * percentChange)).Ticks;
+                //Chart.stockPricePlot.XAxis1.WorldMin = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin) - anchor).Ticks * percentChange)).Ticks;
+                Chart.UpdatePriceMinMax();
+                Chart.stockPricePlot.Refresh();
+
                 return false;
             }
         }
