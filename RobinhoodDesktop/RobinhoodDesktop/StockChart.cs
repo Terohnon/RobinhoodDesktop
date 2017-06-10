@@ -77,6 +77,15 @@ namespace RobinhoodDesktop
             priceText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             stockPricePlot.Canvas.Controls.Add(priceText);
             priceText.BringToFront();
+            changeText = new Label();
+            changeText.Location = new Point(priceText.Location.X - 80, priceText.Location.Y + 25);
+            changeText.Size = new Size(260, changeText.Size.Height);
+            changeText.Font = new System.Drawing.Font("monoprice", 9.0f, System.Drawing.FontStyle.Regular);
+            changeText.ForeColor = System.Drawing.Color.White;
+            changeText.BackColor = System.Drawing.Color.Transparent;
+            changeText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            stockPricePlot.Canvas.Controls.Add(changeText);
+            changeText.BringToFront();
 
             stockPricePlot.Refresh();
         }
@@ -118,7 +127,7 @@ namespace RobinhoodDesktop
             openLine.DataSource = DailyData;
 
             // Update the price text
-            priceText.Text = string.Format("{0:c}", (float)Source.Rows[Source.Rows.Count - 1][PRICE_DATA_TAG]);
+            UpdatePriceText((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]);
 
             // Refresh the chart
             UpdatePriceMinMax();
@@ -227,6 +236,7 @@ namespace RobinhoodDesktop
             {
                 Hovering = false;
                 Lines.Canvas.Visible = false;
+                Chart.UpdatePriceText((DateTime)Chart.Source.Rows[Chart.Source.Rows.Count - 1][TIME_DATA_TAG]);
                 return false;
             }
 
@@ -245,7 +255,7 @@ namespace RobinhoodDesktop
                 if(idx >= 0)
                 {
                     float price = (float)Chart.Source.Rows[idx]["Price"];
-                    Chart.priceText.Text = String.Format("{0:c}", price);
+                    Chart.UpdatePriceText(time);
                     using(System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
                     {
                         PhysicalAxis xAxis = Chart.stockPricePlot.PhysicalXAxis1Cache;
@@ -325,8 +335,6 @@ namespace RobinhoodDesktop
         private Label priceText;
 
         private Label changeText;
-
-        private Label timeText;
         #endregion
 
         #region Properties
@@ -344,24 +352,25 @@ namespace RobinhoodDesktop
         /// Returns the index corresponding to the given time (or -1 if no match is found)
         /// </summary>
         /// <param name="time">The time to get the point for</param>
+        /// <param name="src">The source data to access</param>
         /// <returns>The index of the point in the source data</returns>
-        public int GetTimeIndex(DateTime time)
+        public int GetTimeIndex(DateTime time, DataTable src)
         {
             int idx = -1;
             int min = 0;
-            int max = Source.Rows.Count;
+            int max = src.Rows.Count;
 
             while(true)
             {
                 int mid = (max + min) / 2;
-                DateTime checkTime = (DateTime)Source.Rows[mid]["Time"];
+                DateTime checkTime = (DateTime)src.Rows[mid]["Time"];
                 if((min + 1) >= max)
                 {
                     idx = min;
                     break;
                 } else if(checkTime > time)
                 {
-                    max = mid - 1;
+                    max = mid;
                 } else
                 {
                     min = mid;
@@ -369,6 +378,17 @@ namespace RobinhoodDesktop
             }
 
             return idx;
+        }
+
+        /// <summary>
+        /// Returns the index corresponding to the given time (or -1 if no match is found)
+        /// </summary>
+        /// <param name="time">The time to get the point for</param>
+        /// <param name="src">The source data to access</param>
+        /// <returns>The index of the point in the source data</returns>
+        public int GetTimeIndex(DateTime time)
+        {
+            return GetTimeIndex(time, Source);
         }
 
         /// <summary>
@@ -396,6 +416,23 @@ namespace RobinhoodDesktop
             {
                 stockPricePlot.YAxis1.WorldMax = max * 1.05;
                 stockPricePlot.YAxis1.WorldMin = min * .97;
+            }
+        }
+
+        /// <summary>
+        /// Updates the text describing the price at the given time
+        /// </summary>
+        /// <param name="time">The time to describe</param>
+        private void UpdatePriceText(DateTime time)
+        {
+            int idx = GetTimeIndex(time);
+            if(idx >= 0)
+            {
+                float price = (float)Source.Rows[idx]["Price"];
+                priceText.Text = String.Format("{0:c}", price);
+                float basePrice = (float)DailyData.Rows[GetTimeIndex(time, DailyData)][PRICE_DATA_TAG];
+                float percentChange = -1.0f + (price / basePrice);
+                changeText.Text = String.Format("{0}{1:c}({0}{2:P2}) {3:t} {3:MMM d} '{3:yy}", ((percentChange >= 0) ? "+" : ""), (price - basePrice), percentChange, time);
             }
         }
         #endregion
