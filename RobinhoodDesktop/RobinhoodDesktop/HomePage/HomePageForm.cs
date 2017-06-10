@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BasicallyMe.RobinhoodNet;
 
 namespace RobinhoodDesktop.HomePage
 {
@@ -27,21 +28,24 @@ namespace RobinhoodDesktop.HomePage
 
         private static System.Data.DataTable GenerateExampleData()
         {
+			System.Data.DataTable dt = new System.Data.DataTable();
+			dt.Columns.Add("Time", typeof(DateTime));
+			dt.Columns.Add("Price", typeof(float));
+;
+			try
+			{
+				var rh = new RobinhoodClient();
+				var history = rh.DownloadHistory("AMD", "5minute", "week").Result;
 
-            // Generate data for the price line
-            float price = 10;
-            float min = price;
-            float max = price;
-            DateTime start = new DateTime(2017, 1, 2, 9, 30, 0);
-            Random rand = new Random();
-            System.Data.DataTable dt = new System.Data.DataTable();
-            dt.Columns.Add("Time", typeof(DateTime));
-            dt.Columns.Add("Price", typeof(float));
-            for(int i = 0; i < 20 * 390; i++)
-            {
-                price += (float)((rand.NextDouble() * 0.1) - 0.05);
-                dt.Rows.Add(start.AddDays(i / 390).AddMinutes(i % 390), price);
-            }
+				foreach (var p in history.HistoricalInfo)
+				{
+					dt.Rows.Add(p.BeginsAt, (float)p.OpenPrice);
+				}
+			}
+			catch
+			{
+				Environment.Exit(1);
+			}
 
             return dt;
         }
