@@ -88,6 +88,12 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="RobinhoodNet\RobinhoodNet\RobinhoodNet.csproj">
+      <Project>{4E7B4836-04A8-47FD-A634-3F99CF388977}</Project>
+      <Name>RobinhoodNet</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

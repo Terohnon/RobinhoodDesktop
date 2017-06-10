@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobinhoodDesktop", "RobinhoodDesktop\RobinhoodDesktop.csproj", "{282A66C8-44F2-47D7-9124-5BF3114BF769}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobinhoodNet", "RobinhoodDesktop\RobinhoodNet\RobinhoodNet\RobinhoodNet.csproj", "{4E7B4836-04A8-47FD-A634-3F99CF388977}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{282A66C8-44F2-47D7-9124-5BF3114BF769}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{282A66C8-44F2-47D7-9124-5BF3114BF769}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{282A66C8-44F2-47D7-9124-5BF3114BF769}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E7B4836-04A8-47FD-A634-3F99CF388977}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E7B4836-04A8-47FD-A634-3F99CF388977}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E7B4836-04A8-47FD-A634-3F99CF388977}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E7B4836-04A8-47FD-A634-3F99CF388977}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

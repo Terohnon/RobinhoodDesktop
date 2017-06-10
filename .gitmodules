@@ -1,0 +1,3 @@
+[submodule "RobinhoodDesktop/RobinhoodDesktop/RobinhoodNet"]
+	path = RobinhoodDesktop/RobinhoodDesktop/RobinhoodNet
+	url = https://github.com/xethm55/RobinhoodNet.git
