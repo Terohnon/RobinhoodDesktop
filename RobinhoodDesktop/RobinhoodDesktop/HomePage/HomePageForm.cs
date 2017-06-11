@@ -31,7 +31,7 @@ namespace RobinhoodDesktop.HomePage
 			System.Data.DataTable dt = new System.Data.DataTable();
 			dt.Columns.Add("Time", typeof(DateTime));
 			dt.Columns.Add("Price", typeof(float));
-;
+
 			try
 			{
 				var rh = new RobinhoodClient();
@@ -39,10 +39,10 @@ namespace RobinhoodDesktop.HomePage
 
 				foreach (var p in history.HistoricalInfo)
 				{
-					dt.Rows.Add(p.BeginsAt, (float)p.OpenPrice);
+					dt.Rows.Add(p.BeginsAt.ToLocalTime(), (float)p.OpenPrice);
 				}
 			}
-			catch
+			catch(Exception ex)
 			{
 				Environment.Exit(1);
 			}
