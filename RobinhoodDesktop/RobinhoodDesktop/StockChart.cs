@@ -175,6 +175,12 @@ namespace RobinhoodDesktop
                 Lines.Canvas.Size = Chart.stockPricePlot.Canvas.Size;
                 Lines.Canvas.Enabled = false;
                 this.Chart.stockPricePlot.Canvas.Controls.Add(Lines.Canvas);
+
+                this.Chart.stockPricePlot.Canvas.Resize += (object sender, System.EventArgs e) => 
+                {
+                    Lines.Canvas.Image = new System.Drawing.Bitmap(Chart.stockPricePlot.Canvas.Size.Width, Chart.stockPricePlot.Canvas.Size.Height);
+                    Lines.Canvas.Size = Chart.stockPricePlot.Canvas.Size;
+                };
             }
 
             private class LineDrawer

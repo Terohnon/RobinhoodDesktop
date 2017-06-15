@@ -21,33 +21,45 @@ namespace RobinhoodDesktop.HomePage
             //accountChart.Size = new Size(this.Width - 20, this.Height - 20);
             //this.Controls.Add(accountChart);
 
-            StockChart plot = new StockChart();
-            plot.SetChartData(GenerateExampleData());
-            this.Controls.Add(plot.Canvas);
+            Plot = new StockChart();
+            Plot.SetChartData(GenerateExampleData());
+            this.Controls.Add(Plot.Canvas);
+
+            this.ResizeEnd += HomePageForm_ResizeEnd;
+            HomePageForm_ResizeEnd(this, EventArgs.Empty);
         }
+
+        #region Variables
+        public StockChart Plot;
+        #endregion
 
         private static System.Data.DataTable GenerateExampleData()
         {
-			System.Data.DataTable dt = new System.Data.DataTable();
-			dt.Columns.Add("Time", typeof(DateTime));
-			dt.Columns.Add("Price", typeof(float));
+            System.Data.DataTable dt = new System.Data.DataTable();
+            dt.Columns.Add("Time", typeof(DateTime));
+            dt.Columns.Add("Price", typeof(float));
 
-			try
-			{
-				var rh = new RobinhoodClient();
-				var history = rh.DownloadHistory("AMD", "5minute", "week").Result;
+            try
+            {
+                var rh = new RobinhoodClient();
+                var history = rh.DownloadHistory("AMD", "5minute", "week").Result;
 
-				foreach (var p in history.HistoricalInfo)
-				{
-					dt.Rows.Add(p.BeginsAt.ToLocalTime(), (float)p.OpenPrice);
-				}
-			}
-			catch(Exception ex)
-			{
-				Environment.Exit(1);
-			}
+                foreach(var p in history.HistoricalInfo)
+                {
+                    dt.Rows.Add(p.BeginsAt.ToLocalTime(), (float)p.OpenPrice);
+                }
+            }
+            catch(Exception ex)
+            {
+                Environment.Exit(1);
+            }
 
             return dt;
+        }
+
+        private void HomePageForm_ResizeEnd(object sender, System.EventArgs e)
+        {
+            Plot.Canvas.Size = new Size(this.Width - 20, 300);
         }
     }
 }
