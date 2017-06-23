@@ -67,15 +67,21 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataAccessor.cs" />
     <Compile Include="HomePage\HomePageForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="HomePage\HomePageForm.Designer.cs">
       <DependentUpon>HomePageForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="RobinhoodInterface.cs" />
     <Compile Include="StockChart.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StockChartBasic.cs" />
+    <Compile Include="StockList.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <EmbeddedResource Include="HomePage\HomePageForm.resx">
       <DependentUpon>HomePageForm.cs</DependentUpon>
     </EmbeddedResource>

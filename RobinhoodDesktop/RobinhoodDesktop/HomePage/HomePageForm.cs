@@ -22,15 +22,26 @@ namespace RobinhoodDesktop.HomePage
             //this.Controls.Add(accountChart);
 
             Plot = new StockChart();
-            Plot.SetChartData(GenerateExampleData());
+            //Plot.SetChartData(GenerateExampleData());
             this.Controls.Add(Plot.Canvas);
 
             this.ResizeEnd += HomePageForm_ResizeEnd;
             HomePageForm_ResizeEnd(this, EventArgs.Empty);
+
+            Robinhood = new RobinhoodInterface();
+            DataAccessor.SetAccessor(Robinhood);
+
+            // Add test stock symbols to the list
+            stockListHome.Add("AMD");
+            stockListHome.Add("NVDA");
+            stockListHome.Add("ON");
+            stockListHome.Add("MU");
         }
 
         #region Variables
         public StockChart Plot;
+
+        public RobinhoodInterface Robinhood;
         #endregion
 
         private static System.Data.DataTable GenerateExampleData()
