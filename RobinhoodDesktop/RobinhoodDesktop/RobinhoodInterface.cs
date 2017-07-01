@@ -23,7 +23,7 @@ namespace RobinhoodDesktop
         /// The amount of time to delay before processing a history request
         /// to allow multiple requests to be grouped together.
         /// </summary>
-        private const double HISTORY_REQUEST_PROCESS_DELAY = 0.1;
+        private const double HISTORY_REQUEST_PROCESS_DELAY = 0.01;
 
         /// <summary>
         /// The supported time intervals for history data
@@ -91,6 +91,14 @@ namespace RobinhoodDesktop
         #endregion
 
         /// <summary>
+        /// Closes any ongoing connections and cleans up the object
+        /// </summary>
+        public void Close()
+        {
+            RobinhoodThread.Abort();
+        }
+
+        /// <summary>
         /// Requests price history data for a stock
         /// </summary>
         /// <param name="symbol">The stock symbol to request for</param>
@@ -103,6 +111,24 @@ namespace RobinhoodDesktop
             HistoryMutex.WaitOne();
             HistoryRequests.Add(new HistoryRequest(symbol, start, end, interval, callback));
             HistoryMutex.ReleaseMutex();
+        }
+
+        /// <summary>
+        /// Searches for stocks based on the symbol string
+        /// </summary>
+        /// <param name="symbol">The symbol (or portion of) to search for</param>
+        /// <param name="callback">Callback executed once the search is complete</param>
+        public void Search(string symbol, DataAccessor.SearchCallback callback)
+        {
+            Client.FindInstrument(symbol).ContinueWith((instrument) => 
+                {
+                    Dictionary<string, string> searchResult = new Dictionary<string, string>();
+                    foreach(var stock in instrument.Result)
+                    {
+                        searchResult.Add(stock.Symbol, stock.Name);
+                    }
+                    callback(searchResult);
+                });
         }
 
         /// <summary>
@@ -172,6 +198,9 @@ namespace RobinhoodDesktop
                         HistoryMutex.ReleaseMutex();
                     }
                 }
+
+                // Sleep so the thread doesn't run at 100% CPU
+                System.Threading.Thread.Sleep(5);
             }
         }
 

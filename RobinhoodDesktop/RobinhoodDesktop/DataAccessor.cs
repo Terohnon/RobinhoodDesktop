@@ -13,6 +13,12 @@ namespace RobinhoodDesktop
         /// </summary>
         /// <param name="data"></param>
         public delegate void PriceDataCallback(DataTable data);
+
+        /// <summary>
+        /// A callback that is executed when a search is completed
+        /// </summary>
+        /// <param name="results">The results of the search, sent as a symbol and full name pair</param>
+        public delegate void SearchCallback(Dictionary<string, string> results);
         #endregion
 
         #region Interface
@@ -27,6 +33,13 @@ namespace RobinhoodDesktop
             /// <param name="interval">The desired interval between price points in the data set</param>
             /// <param name="callback">A callback that is executed once the requested data is available</param>
             void GetPriceHistory(string symbol, DateTime start, DateTime end, TimeSpan interval, PriceDataCallback callback);
+
+            /// <summary>
+            /// Searches for stocks based on the symbol string
+            /// </summary>
+            /// <param name="symbol">The symbol (or portion of) to search for</param>
+            /// <param name="callback">Callback executed once the search is complete</param>
+            void Search(string symbol, SearchCallback callback);
         }
         #endregion
 
@@ -49,6 +62,16 @@ namespace RobinhoodDesktop
         public static void GetPriceHistory(string symbol, DateTime start, DateTime end, TimeSpan interval, PriceDataCallback callback)
         {
             Accessor.GetPriceHistory(symbol, start, end, interval, callback);
+        }
+
+        /// <summary>
+        /// Searches for stocks based on the symbol string
+        /// </summary>
+        /// <param name="symbol">The symbol (or portion of) to search for</param>
+        /// <param name="callback">Callback executed once the search is complete</param>
+        public static void Search(string symbol, SearchCallback callback)
+        {
+            Accessor.Search(symbol, callback);
         }
 
         /// <summary>

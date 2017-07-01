@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace RobinhoodDesktop
 {
-    class StockList : Panel
+    public class StockList : Panel
     {
 
 

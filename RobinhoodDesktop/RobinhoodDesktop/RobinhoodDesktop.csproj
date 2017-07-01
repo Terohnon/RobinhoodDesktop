@@ -75,6 +75,9 @@
       <DependentUpon>HomePageForm.cs</DependentUpon>
     </Compile>
     <Compile Include="RobinhoodInterface.cs" />
+    <Compile Include="SearchList.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="StockChart.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

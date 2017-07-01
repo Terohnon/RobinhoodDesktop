@@ -16,6 +16,7 @@ namespace RobinhoodDesktop.HomePage
         public HomePageForm()
         {
             InitializeComponent();
+            this.FormClosing += HomePageForm_FormClosing;
 
             //HomePage.AccountSummaryChart accountChart = new HomePage.AccountSummaryChart();
             //accountChart.Size = new Size(this.Width - 20, this.Height - 20);
@@ -31,16 +32,35 @@ namespace RobinhoodDesktop.HomePage
             Robinhood = new RobinhoodInterface();
             DataAccessor.SetAccessor(Robinhood);
 
+            // Create the search box
+            SearchHome = new SearchList();
+            SearchHome.Size = new Size(300, 300);
+            SearchHome.Location = new Point(20, 320);
+            Controls.Add(SearchHome);
+
             // Add test stock symbols to the list
-            stockListHome.Add("AMD");
-            stockListHome.Add("NVDA");
-            stockListHome.Add("ON");
-            stockListHome.Add("MU");
+#if false
+            StockListHome = new StockList();
+            StockListHome.Location = new Point(SearchHome.Location.X, SearchHome.Location.Y + 400);
+            StockListHome.Size = new Size(300, 300);
+            StockListHome.Add("AMD");
+            StockListHome.Add("NVDA");
+            StockListHome.Add("ON");
+            StockListHome.Add("MU");
+            StockListHome.Add("GNTX");
+            StockListHome.Add("XLNX");
+            StockListHome.Add("TSLA");
+            StockListHome.Add("FL");
+            StockListHome.Add("FINL");
+            StockListHome.Add("VRA");
+            Controls.Add(StockListHome);
+#endif
         }
 
         #region Variables
         public StockChart Plot;
-
+        public SearchList SearchHome;
+        public StockList StockListHome;
         public RobinhoodInterface Robinhood;
         #endregion
 
@@ -71,6 +91,12 @@ namespace RobinhoodDesktop.HomePage
         private void HomePageForm_ResizeEnd(object sender, System.EventArgs e)
         {
             Plot.Canvas.Size = new Size(this.Width - 20, 300);
+            //StockListHome.Size = new Size(StockListHome.Width, ((Height - StockListHome.Location.Y) - 40));
+        }
+
+        private void HomePageForm_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            Robinhood.Close();
         }
     }
 }
