@@ -25,7 +25,7 @@ namespace RobinhoodDesktop
 
             private void Initialize()
             {
-                this.Size = new System.Drawing.Size(300, 50);
+                this.Size = new System.Drawing.Size(275, 50);
 
                 TickerLabel = new Label();
                 TickerLabel.Size = new System.Drawing.Size(50, 15);
@@ -91,7 +91,17 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The list of stocks this is representing
         /// </summary>
-        private List<StockLine> Stocks = new List<StockLine>();
+        private Dictionary<string, List<StockLine>> Stocks = new Dictionary<string, List<StockLine>>();
+
+        /// <summary>
+        /// Determines the order that the groups should be 
+        /// </summary>
+        public List<string> GroupOrder = new List<string>();
+
+        /// <summary>
+        /// Keeps track of the labels for each group
+        /// </summary>
+        private Dictionary<string, Label> GroupLabels = new Dictionary<string, Label>();
         #endregion
 
 
@@ -99,13 +109,22 @@ namespace RobinhoodDesktop
         /// Adds a new symbol to the list
         /// </summary>
         /// <param name="symbol">The ticker symbol to add</param>
-        public void Add(string symbol)
+        public void Add(string group, string symbol)
         {
             // Ensure the symbol is not already in the list
             bool isNew = true;
-            for(int i = 0; i < Stocks.Count; i++)
+            List<StockLine> stockList;
+            if(!Stocks.TryGetValue(group, out stockList))
             {
-                if(Stocks[i].Name.Equals(symbol))
+                stockList = new List<StockLine>();
+                Stocks.Add(group, stockList);
+                GroupOrder.Add(group);
+                GroupLabels.Add(group, new Label());
+                Controls.Add(GroupLabels[group]);
+            }
+            for(int i = 0; i < stockList.Count; i++)
+            {
+                if(stockList[i].Name.Equals(symbol))
                 {
                     isNew = false;
                     break;
@@ -115,13 +134,78 @@ namespace RobinhoodDesktop
             {
                 StockLine newLine = new StockLine(symbol);
                 newLine.Location = new System.Drawing.Point(5, (int)((Stocks.Count + 0.5) * (newLine.Height + 5)));
-                Stocks.Add(newLine);
+                stockList.Add(newLine);
                 this.Controls.Add(newLine);
                 this.Refresh();
 
                 // Request data to fill the summary chart
                 DataAccessor.GetPriceHistory(symbol, DateTime.Now.Date.AddHours(-12), DateTime.Now.Date.AddHours(16), new TimeSpan(0, 1, 0), newLine.Update);
             }
+        }
+
+        /// <summary>
+        /// Removes a symbol from the list
+        /// </summary>
+        /// <param name="symbol">The stock symbol to remove</param>
+        public void Remove(string symbol)
+        {
+            List<string> emptyGroups = new List<string>();
+
+            foreach(var stockList in Stocks)
+            {
+                for(int i = 0; i < stockList.Value.Count; i++)
+                {
+                    if(stockList.Value[i].Name.Equals(symbol))
+                    {
+                        stockList.Value.RemoveAt(i);
+                        i--;
+                    }
+                }
+
+                // Check if the group is now empty
+                if(stockList.Value.Count == 0)
+                {
+                    emptyGroups.Add(stockList.Key);
+                }
+            }
+
+            foreach(var group in emptyGroups)
+            {
+                Stocks.Remove(group);
+                GroupOrder.Remove(group);
+                Controls.Remove(GroupLabels[group]);
+                GroupLabels.Remove(group);
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the control, re-positioning all of the stocks
+        /// </summary>
+        public override void Refresh()
+        {
+            int yPos = 5;
+            int spacing = 5;
+
+            // Place each group
+            for(int i = 0; i < GroupOrder.Count; i++)
+            {
+                string group = GroupOrder[i];
+                GroupLabels[group].Text = group;
+                GroupLabels[group].Location = new System.Drawing.Point(GroupLabels[group].Location.X, yPos);
+                yPos += (GroupLabels[group].Height + spacing);
+
+                // Place all of the stocks in the group
+                foreach(StockLine stock in Stocks[group])
+                {
+                    stock.Location = new System.Drawing.Point(stock.Location.X, yPos);
+                    yPos += (stock.Height + spacing);
+                }
+
+                // Add a little extra space between groups
+                yPos += spacing;
+            }
+
+            base.Refresh();
         }
     }
 }

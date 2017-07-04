@@ -20,6 +20,7 @@ namespace RobinhoodDesktop
 
             this.BackColor = System.Drawing.Color.FromArgb(90, 10, 10, 10);
             this.AutoScroll = true;
+            this.Resize += OnResize;
         }
 
         #region Types
@@ -96,8 +97,9 @@ namespace RobinhoodDesktop
                 {
                     this.BeginInvoke((Action<Dictionary<string, string>>)((Dictionary<string, string> results) =>
                     {
+                        this.SuspendLayout();
                         ClearSearchResults();
-                        int yPos = 25;
+                        int yPos = 35;
                         foreach(var pair in results)
                         {
                             StockListItem item = new StockListItem(pair.Key, pair.Value);
@@ -106,6 +108,7 @@ namespace RobinhoodDesktop
 
                             yPos += 35;
                         }
+                        this.ResumeLayout();
                     }), new object[] { r });
                     
                 });
@@ -149,6 +152,14 @@ namespace RobinhoodDesktop
             }
         }
 
-        
+        /// <summary>
+        /// Callback that is executed when the control is resized
+        /// <param name="sender">The parent object</param>
+        /// <param name="e">The event arguments</param>
+        /// </summary>
+        public void OnResize(object sender, EventArgs e)
+        {
+            SearchboxText.Size = new System.Drawing.Size(this.Size.Width - (10 + 20), SearchboxText.Height);
+        }
     }
 }

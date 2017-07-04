@@ -220,21 +220,24 @@ namespace RobinhoodDesktop
             /// <returns></returns>
             public override bool DoMouseScroll(int X, int Y, int direction, Modifier keys, InteractivePlotSurface2D ps)
             {
-                double percentChange = ((direction > 0) ? (1 / 1.2) : (1.2));
-                DateTime anchor = new DateTime((long)Chart.stockPricePlot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false));
-                int anchorIdx = Chart.GetTimeIndex(anchor);
-                int minIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin));
-                int maxIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax));
-                minIdx = anchorIdx + (int)Math.Round((minIdx - anchorIdx) * percentChange);
-                maxIdx = anchorIdx + (int)Math.Round((maxIdx - anchorIdx) * percentChange);
-                minIdx = Math.Max(minIdx, 0);
-                maxIdx = Math.Min(maxIdx, Chart.Source.Rows.Count - 1);
-                Chart.stockPricePlot.XAxis1.WorldMin = (double)((DateTime)Chart.Source.Rows[minIdx][TIME_DATA_TAG]).Ticks;
-                Chart.stockPricePlot.XAxis1.WorldMax = (double)((DateTime)Chart.Source.Rows[maxIdx][TIME_DATA_TAG]).Ticks;
-                //Chart.stockPricePlot.XAxis1.WorldMax = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax) - anchor).Ticks * percentChange)).Ticks;
-                //Chart.stockPricePlot.XAxis1.WorldMin = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin) - anchor).Ticks * percentChange)).Ticks;
-                Chart.UpdatePriceMinMax();
-                Chart.stockPricePlot.Refresh();
+                if(Hovering && (Chart.Source != null))
+                {
+                    double percentChange = ((direction > 0) ? (1 / 1.2) : (1.2));
+                    DateTime anchor = new DateTime((long)Chart.stockPricePlot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false));
+                    int anchorIdx = Chart.GetTimeIndex(anchor);
+                    int minIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin));
+                    int maxIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax));
+                    minIdx = anchorIdx + (int)Math.Round((minIdx - anchorIdx) * percentChange);
+                    maxIdx = anchorIdx + (int)Math.Round((maxIdx - anchorIdx) * percentChange);
+                    minIdx = Math.Max(minIdx, 0);
+                    maxIdx = Math.Min(maxIdx, Chart.Source.Rows.Count - 1);
+                    Chart.stockPricePlot.XAxis1.WorldMin = (double)((DateTime)Chart.Source.Rows[minIdx][TIME_DATA_TAG]).Ticks;
+                    Chart.stockPricePlot.XAxis1.WorldMax = (double)((DateTime)Chart.Source.Rows[maxIdx][TIME_DATA_TAG]).Ticks;
+                    //Chart.stockPricePlot.XAxis1.WorldMax = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax) - anchor).Ticks * percentChange)).Ticks;
+                    //Chart.stockPricePlot.XAxis1.WorldMin = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin) - anchor).Ticks * percentChange)).Ticks;
+                    Chart.UpdatePriceMinMax();
+                    Chart.stockPricePlot.Refresh();
+                }
 
                 return false;
             }

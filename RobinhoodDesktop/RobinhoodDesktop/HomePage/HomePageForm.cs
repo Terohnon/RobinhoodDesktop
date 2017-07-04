@@ -23,38 +23,44 @@ namespace RobinhoodDesktop.HomePage
             //this.Controls.Add(accountChart);
 
             Plot = new StockChart();
+            Plot.Canvas.Location = new Point(340, 20);
             //Plot.SetChartData(GenerateExampleData());
             this.Controls.Add(Plot.Canvas);
-
-            this.ResizeEnd += HomePageForm_ResizeEnd;
-            HomePageForm_ResizeEnd(this, EventArgs.Empty);
 
             Robinhood = new RobinhoodInterface();
             DataAccessor.SetAccessor(Robinhood);
 
             // Create the search box
             SearchHome = new SearchList();
-            SearchHome.Size = new Size(300, 300);
-            SearchHome.Location = new Point(20, 320);
+            SearchHome.Size = new Size(300, 50);
+            SearchHome.Location = new Point(20, 20);
+            SearchHome.AutoSize = true;
             Controls.Add(SearchHome);
 
             // Add test stock symbols to the list
-#if false
+#if true
             StockListHome = new StockList();
-            StockListHome.Location = new Point(SearchHome.Location.X, SearchHome.Location.Y + 400);
+            StockListHome.Location = new Point(SearchHome.Location.X, SearchHome.Location.Y + 100);
+            StockListHome.AutoScroll = true;
             StockListHome.Size = new Size(300, 300);
-            StockListHome.Add("AMD");
-            StockListHome.Add("NVDA");
-            StockListHome.Add("ON");
-            StockListHome.Add("MU");
-            StockListHome.Add("GNTX");
-            StockListHome.Add("XLNX");
-            StockListHome.Add("TSLA");
-            StockListHome.Add("FL");
-            StockListHome.Add("FINL");
-            StockListHome.Add("VRA");
+            
+            StockListHome.Add("Positions", "AMD");
+            StockListHome.Add("Watchlist", "NVDA");
+            StockListHome.Add("Watchlist", "ON");
+            StockListHome.Add("Watchlist", "MU");
+            StockListHome.Add("Watchlist", "OLED");
+            StockListHome.Add("Watchlist", "GNTX");
+            StockListHome.Add("Watchlist", "XLNX");
+            StockListHome.Add("Watchlist", "TSLA");
+            StockListHome.Add("Watchlist", "FL");
+            StockListHome.Add("Watchlist", "FINL");
+            StockListHome.Add("Watchlist", "VRA");
             Controls.Add(StockListHome);
 #endif
+
+            // Set up the resize handler
+            this.ResizeEnd += HomePageForm_ResizeEnd;
+            HomePageForm_ResizeEnd(this, EventArgs.Empty);
         }
 
         #region Variables
@@ -90,8 +96,8 @@ namespace RobinhoodDesktop.HomePage
 
         private void HomePageForm_ResizeEnd(object sender, System.EventArgs e)
         {
-            Plot.Canvas.Size = new Size(this.Width - 20, 300);
-            //StockListHome.Size = new Size(StockListHome.Width, ((Height - StockListHome.Location.Y) - 40));
+            Plot.Canvas.Size = new Size((this.Width - (StockListHome.Location.X + StockListHome.Width)) - 40, 300);
+            StockListHome.Size = new Size(StockListHome.Width, ((this.Height - StockListHome.Location.Y) - 40));
         }
 
         private void HomePageForm_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
