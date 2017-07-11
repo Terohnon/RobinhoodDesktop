@@ -24,6 +24,12 @@ namespace RobinhoodDesktop
         }
 
         #region Types
+        /// <summary>
+        /// Callback function to add a symbol to a watchlist
+        /// </summary>
+        /// <param name="symbol">The stock symbol to add</param>
+        public delegate void AddToWatlistCallback(string symbol);
+
         public class StockListItem : Panel
         {
             /// <summary>
@@ -46,7 +52,7 @@ namespace RobinhoodDesktop
             /// </summary>
             public PictureBox AddButton;
 
-            public StockListItem(string symbol, string name)
+            public StockListItem(SearchList master, string symbol, string name)
             {
                 this.SymbolLabel = new Label();
                 this.SymbolLabel.Size = new System.Drawing.Size(50, 15);
@@ -62,15 +68,17 @@ namespace RobinhoodDesktop
 
                 this.AddButton = new PictureBox();
                 this.AddButton.Location = new System.Drawing.Point(this.StockLabel.Location.X + this.StockLabel.Width + 5, this.StockLabel.Location.Y);
-                this.AddButton.Size = new System.Drawing.Size(30, 30);
-                //this.AddButton.Image
+                this.AddButton.Image = System.Drawing.Bitmap.FromFile("Content/GUI/Button_Add.png");
+                this.AddButton.Size = AddButton.Image.Size;
+                this.AddButton.BackColor = System.Drawing.Color.Transparent;
                 this.AddButton.MouseUp += (object sender, MouseEventArgs e) =>
                 {
-
+                    master.AddToWatchlist(symbol);
+                    master.ClearSearchResults();
                 };
                 Controls.Add(this.AddButton);
 
-                this.Size = new System.Drawing.Size(this.AddButton.Location.X + this.AddButton.Width + 5, this.AddButton.Height);
+                this.Size = new System.Drawing.Size(this.AddButton.Location.X + this.AddButton.Width + 5, this.AddButton.Location.Y + this.AddButton.Height);
             }
         }
         #endregion
@@ -80,6 +88,11 @@ namespace RobinhoodDesktop
         /// The textbox used for search input
         /// </summary>
         public TextBox SearchboxText;
+
+        /// <summary>
+        /// Callback function to add a stock symbol to a watchlist
+        /// </summary>
+        public AddToWatlistCallback AddToWatchlist;
 
         /// <summary>
         /// The current search results
@@ -102,7 +115,7 @@ namespace RobinhoodDesktop
                         int yPos = 35;
                         foreach(var pair in results)
                         {
-                            StockListItem item = new StockListItem(pair.Key, pair.Value);
+                            StockListItem item = new StockListItem(this, pair.Key, pair.Value);
                             item.Location = new System.Drawing.Point(5, yPos);
                             Controls.Add(item);
 

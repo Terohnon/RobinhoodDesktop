@@ -91,7 +91,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The list of stocks this is representing
         /// </summary>
-        private Dictionary<string, List<StockLine>> Stocks = new Dictionary<string, List<StockLine>>();
+        public Dictionary<string, List<StockLine>> Stocks = new Dictionary<string, List<StockLine>>();
 
         /// <summary>
         /// Determines the order that the groups should be 
@@ -124,7 +124,7 @@ namespace RobinhoodDesktop
             }
             for(int i = 0; i < stockList.Count; i++)
             {
-                if(stockList[i].Name.Equals(symbol))
+                if(stockList[i].Symbol.Equals(symbol))
                 {
                     isNew = false;
                     break;

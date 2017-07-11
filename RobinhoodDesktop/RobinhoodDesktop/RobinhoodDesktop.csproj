@@ -85,6 +85,7 @@
     <Compile Include="StockList.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="UserConfig.cs" />
     <EmbeddedResource Include="HomePage\HomePageForm.resx">
       <DependentUpon>HomePageForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -115,6 +116,11 @@
       <Project>{4E7B4836-04A8-47FD-A634-3F99CF388977}</Project>
       <Name>RobinhoodNet</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\GUI\Button_Add.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

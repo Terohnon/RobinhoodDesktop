@@ -22,6 +22,8 @@ namespace RobinhoodDesktop.HomePage
             //accountChart.Size = new Size(this.Width - 20, this.Height - 20);
             //this.Controls.Add(accountChart);
 
+            this.Config = UserConfig.Load(UserConfig.CONFIG_FILE);
+
             Plot = new StockChart();
             Plot.Canvas.Location = new Point(340, 20);
             //Plot.SetChartData(GenerateExampleData());
@@ -35,6 +37,7 @@ namespace RobinhoodDesktop.HomePage
             SearchHome.Size = new Size(300, 50);
             SearchHome.Location = new Point(20, 20);
             SearchHome.AutoSize = true;
+            SearchHome.AddToWatchlist += (string symbol) => { StockListHome.Add("Watchlist", symbol); };
             Controls.Add(SearchHome);
 
             // Add test stock symbols to the list
@@ -45,16 +48,10 @@ namespace RobinhoodDesktop.HomePage
             StockListHome.Size = new Size(300, 300);
             
             StockListHome.Add("Positions", "AMD");
-            StockListHome.Add("Watchlist", "NVDA");
-            StockListHome.Add("Watchlist", "ON");
-            StockListHome.Add("Watchlist", "MU");
-            StockListHome.Add("Watchlist", "OLED");
-            StockListHome.Add("Watchlist", "GNTX");
-            StockListHome.Add("Watchlist", "XLNX");
-            StockListHome.Add("Watchlist", "TSLA");
-            StockListHome.Add("Watchlist", "FL");
-            StockListHome.Add("Watchlist", "FINL");
-            StockListHome.Add("Watchlist", "VRA");
+            foreach(string symbol in Config.LocalWatchlist)
+            {
+                StockListHome.Add("Watchlist", symbol);
+            }
             Controls.Add(StockListHome);
 #endif
 
@@ -68,6 +65,7 @@ namespace RobinhoodDesktop.HomePage
         public SearchList SearchHome;
         public StockList StockListHome;
         public RobinhoodInterface Robinhood;
+        public UserConfig Config;
         #endregion
 
         private static System.Data.DataTable GenerateExampleData()
@@ -103,6 +101,15 @@ namespace RobinhoodDesktop.HomePage
         private void HomePageForm_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             Robinhood.Close();
+
+            Config.LocalWatchlist.Clear();
+            foreach(var stock in StockListHome.Stocks["Watchlist"])
+            {
+                Config.LocalWatchlist.Add(stock.Symbol);
+            }
+
+            // Save the current user configuration
+            Config.Save(UserConfig.CONFIG_FILE);
         }
     }
 }
