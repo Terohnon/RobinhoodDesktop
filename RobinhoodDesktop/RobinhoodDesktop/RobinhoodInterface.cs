@@ -125,7 +125,10 @@ namespace RobinhoodDesktop
                     Dictionary<string, string> searchResult = new Dictionary<string, string>();
                     foreach(var stock in instrument.Result)
                     {
-                        searchResult.Add(stock.Symbol, stock.Name);
+                        if(!searchResult.ContainsKey(stock.Symbol))
+                        {
+                            searchResult.Add(stock.Symbol, stock.Name);
+                        }
                     }
                     callback(searchResult);
                 });

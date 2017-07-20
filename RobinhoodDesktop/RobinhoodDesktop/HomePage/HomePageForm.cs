@@ -24,10 +24,20 @@ namespace RobinhoodDesktop.HomePage
 
             this.Config = UserConfig.Load(UserConfig.CONFIG_FILE);
 
-            Plot = new StockChart();
-            Plot.Canvas.Location = new Point(340, 20);
+            UIList = new Panel();
+            UIList.HorizontalScroll.Maximum = 0;
+            UIList.AutoScroll = true;
+            UIList.Resize += (sender, e) =>
+            {
+                foreach(Control c in UIList.Controls)
+                {
+                    c.Size = new Size(UIList.Width - 10, c.Height);
+                }
+            };
+            UIList.ControlAdded += UIList_Pack;
+            UIList.Location = new Point(340, 20);
             //Plot.SetChartData(GenerateExampleData());
-            this.Controls.Add(Plot.Canvas);
+            this.Controls.Add(UIList);
 
             Robinhood = new RobinhoodInterface();
             DataAccessor.SetAccessor(Robinhood);
@@ -38,6 +48,15 @@ namespace RobinhoodDesktop.HomePage
             SearchHome.Location = new Point(20, 20);
             SearchHome.AutoSize = true;
             SearchHome.AddToWatchlist += (string symbol) => { StockListHome.Add("Watchlist", symbol); };
+            SearchHome.AddStockUi += (string symbol) => 
+            {
+                StockUI ui = new StockUI(symbol);
+                StockUIs.Add(ui);
+                StockChartPanel p = new StockChartPanel(ui.Canvas);
+                p.Size = new Size(UIList.Width - 10, 250);
+                p.Resize += UIList_Pack;
+                UIList.Controls.Add(p);
+            };
             Controls.Add(SearchHome);
 
             // Add test stock symbols to the list
@@ -61,11 +80,12 @@ namespace RobinhoodDesktop.HomePage
         }
 
         #region Variables
-        public StockChart Plot;
         public SearchList SearchHome;
         public StockList StockListHome;
         public RobinhoodInterface Robinhood;
         public UserConfig Config;
+        public List<StockUI> StockUIs = new List<StockUI>();
+        public Panel UIList;
         #endregion
 
         private static System.Data.DataTable GenerateExampleData()
@@ -92,9 +112,19 @@ namespace RobinhoodDesktop.HomePage
             return dt;
         }
 
+        private void UIList_Pack(object sender, System.EventArgs e)
+        {
+            int y = 0;
+            foreach(Control c in UIList.Controls)
+            {
+                c.Location = new Point(c.Location.X, y);
+                y += c.Height + 5;
+            }
+        }
+
         private void HomePageForm_ResizeEnd(object sender, System.EventArgs e)
         {
-            Plot.Canvas.Size = new Size((this.Width - (StockListHome.Location.X + StockListHome.Width)) - 40, 300);
+            UIList.Size = new Size((this.Width - (StockListHome.Location.X + StockListHome.Width)) - 40, (this.Height - UIList.Location.Y) - 40);
             StockListHome.Size = new Size(StockListHome.Width, ((this.Height - StockListHome.Location.Y) - 40));
         }
 

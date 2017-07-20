@@ -42,7 +42,7 @@ namespace RobinhoodDesktop
             priceText = new Label();
             priceText.Location = new System.Drawing.Point((stockPricePlot.Canvas.Width - 100) / 2, 10);
             priceText.Font = new System.Drawing.Font("monoprice", 12.0f, System.Drawing.FontStyle.Regular);
-            priceText.ForeColor = System.Drawing.Color.White;
+            priceText.ForeColor = TEXT_COLOR;
             priceText.BackColor = System.Drawing.Color.Transparent;
             priceText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             stockPricePlot.Canvas.Controls.Add(priceText);
@@ -51,7 +51,7 @@ namespace RobinhoodDesktop
             changeText.Location = new Point(priceText.Location.X - 80, priceText.Location.Y + 25);
             changeText.Size = new Size(260, changeText.Size.Height);
             changeText.Font = new System.Drawing.Font("monoprice", 9.0f, System.Drawing.FontStyle.Regular);
-            changeText.ForeColor = System.Drawing.Color.White;
+            changeText.ForeColor = TEXT_COLOR;
             changeText.BackColor = System.Drawing.Color.Transparent;
             changeText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             stockPricePlot.Canvas.Controls.Add(changeText);

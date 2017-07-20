@@ -28,7 +28,7 @@ namespace RobinhoodDesktop
         /// Callback function to add a symbol to a watchlist
         /// </summary>
         /// <param name="symbol">The stock symbol to add</param>
-        public delegate void AddToWatlistCallback(string symbol);
+        public delegate void StockSymbolCallback(string symbol);
 
         public class StockListItem : Panel
         {
@@ -58,12 +58,14 @@ namespace RobinhoodDesktop
                 this.SymbolLabel.Size = new System.Drawing.Size(50, 15);
                 this.SymbolLabel.Location = new System.Drawing.Point(5, 5);
                 this.SymbolLabel.Text = symbol;
+                this.SymbolLabel.MouseUp += (sender, e) => { this.OnMouseUp(e); };
                 Controls.Add(SymbolLabel);
 
                 this.StockLabel = new Label();
                 this.StockLabel.Size = new System.Drawing.Size(150, 15);
                 this.StockLabel.Location = new System.Drawing.Point(this.SymbolLabel.Location.X + this.SymbolLabel.Width + 5, this.SymbolLabel.Location.Y);
                 this.StockLabel.Text = name;
+                this.StockLabel.MouseUp += (sender, e) => { this.OnMouseUp(e); };
                 Controls.Add(StockLabel);
 
                 this.AddButton = new PictureBox();
@@ -79,6 +81,11 @@ namespace RobinhoodDesktop
                 Controls.Add(this.AddButton);
 
                 this.Size = new System.Drawing.Size(this.AddButton.Location.X + this.AddButton.Width + 5, this.AddButton.Location.Y + this.AddButton.Height);
+                this.MouseUp += (object sender, MouseEventArgs e) =>
+                {
+                    master.AddStockUi(symbol);
+                    master.ClearSearchResults();
+                };
             }
         }
         #endregion
@@ -92,7 +99,12 @@ namespace RobinhoodDesktop
         /// <summary>
         /// Callback function to add a stock symbol to a watchlist
         /// </summary>
-        public AddToWatlistCallback AddToWatchlist;
+        public StockSymbolCallback AddToWatchlist;
+
+        /// <summary>
+        /// Callback function to add a new UI element for the specified stock
+        /// </summary>
+        public StockSymbolCallback AddStockUi;
 
         /// <summary>
         /// The current search results

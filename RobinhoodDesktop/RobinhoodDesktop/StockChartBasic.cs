@@ -113,6 +113,11 @@ namespace RobinhoodDesktop
         public static readonly System.Drawing.Color PRICE_COLOR_POSITIVE = System.Drawing.Color.FromArgb(255, 0, 173, 145);
 
         /// <summary>
+        /// The color of text
+        /// </summary>
+        public static readonly System.Drawing.Color TEXT_COLOR = System.Drawing.Color.FromArgb(255, 255, 255, 255);
+
+        /// <summary>
         /// The color of guidelines and text
         /// </summary>
         public static readonly System.Drawing.Color GUIDE_COLOR = System.Drawing.Color.FromArgb(255, 56, 66, 71);
@@ -125,7 +130,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The tag identifying a time entry in a data table
         /// </summary>
-        public static readonly string TIME_DATA_TAG = "Time";
+        public static readonly string TIME_DATA_TAG = "Time"; 
 
         /// <summary>
         /// The tag identifying a price entry in a data table

@@ -82,9 +82,13 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StockChartBasic.cs" />
+    <Compile Include="StockChartPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="StockList.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="StockUI.cs" />
     <Compile Include="UserConfig.cs" />
     <EmbeddedResource Include="HomePage\HomePageForm.resx">
       <DependentUpon>HomePageForm.cs</DependentUpon>
@@ -120,6 +124,12 @@
   <ItemGroup>
     <Content Include="Content\GUI\Button_Add.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\GUI\Button_Close.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\GUI\Button_Collapse.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

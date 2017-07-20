@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="Button_Add.svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.49497475"
+     inkscape:cx="196.79921"
+     inkscape:cy="105.05953"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1018"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       sodipodi:type="arc"
+       style="fill:none;stroke:#00ad91;stroke-width:12.53488369;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path2985"
+       sodipodi:cx="244.28572"
+       sodipodi:cy="490.93362"
+       sodipodi:rx="124.28571"
+       sodipodi:ry="121.42857"
+       d="m 368.57143,490.93362 a 124.28571,121.42857 0 1 1 -248.57142,0 124.28571,121.42857 0 1 1 248.57142,0 z"
+       transform="matrix(0.78855054,0,0,0.80710465,24.868372,118.62738)"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Add.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725" />
+    <text
+       xml:space="preserve"
+       style="font-size:234.90159607000004000px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#00ad91;fill-opacity:1;stroke:none;font-family:Arial;-inkscape-font-specification:Arial"
+       x="139.30537"
+       y="625.67346"
+       id="text3755"
+       sodipodi:linespacing="125%"
+       transform="scale(1.0531678,0.94951632)"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Add.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725"><tspan
+         sodipodi:role="line"
+         id="tspan3757"
+         x="139.30537"
+         y="625.67346">+</tspan></text>
+    <path
+       sodipodi:type="arc"
+       style="fill:none;stroke:#00ad91;stroke-width:12.5348835;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path2985-1"
+       sodipodi:cx="244.28572"
+       sodipodi:cy="490.93362"
+       sodipodi:rx="124.28571"
+       sodipodi:ry="121.42857"
+       d="m 368.57143,490.93362 a 124.28571,121.42857 0 1 1 -248.57142,0 124.28571,121.42857 0 1 1 248.57142,0 z"
+       transform="matrix(0.78855054,0,0,0.80710465,28.591768,358.13237)"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Collapse.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725" />
+    <path
+       style="fill:#00ad91;fill-opacity:1;stroke:#00ad91;stroke-opacity:1;stroke-width:5;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 158.59396,706.69567 126.03883,0 0,11.11168 -47.75201,0 29.87564,32.97789 -11.11168,9.59645 -26.84518,-31.46266 1.01015,97.47972 -14.14214,0 -2.0203,-97.47972 -24.24366,31.81981 -10.10153,-9.59646 29.29442,-33.33503 -50.00254,0 z"
+       id="path3003"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccccccccccccc" />
+    <path
+       sodipodi:type="arc"
+       style="fill:none;stroke:#00ad91;stroke-width:12.5348835;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path2985-1-7"
+       sodipodi:cx="244.28572"
+       sodipodi:cy="490.93362"
+       sodipodi:rx="124.28571"
+       sodipodi:ry="121.42857"
+       d="m 368.57143,490.93362 a 124.28571,121.42857 0 1 1 -248.57142,0 124.28571,121.42857 0 1 1 248.57142,0 z"
+       transform="matrix(0.78855054,0,0,0.80710465,27.581622,581.37608)"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Close.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725" />
+    <text
+       xml:space="preserve"
+       style="font-size:234.90159607px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#00ad91;fill-opacity:1;stroke:none;font-family:Arial;-inkscape-font-specification:Arial"
+       x="152.01653"
+       y="1093.1934"
+       id="text3755-4"
+       sodipodi:linespacing="125%"
+       transform="scale(1.0531678,0.94951631)"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Add.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725"><tspan
+         sodipodi:role="line"
+         id="tspan3757-0"
+         x="152.01653"
+         y="1093.1934">x</tspan></text>
+  </g>
+</svg>
