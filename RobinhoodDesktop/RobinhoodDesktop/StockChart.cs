@@ -65,11 +65,11 @@ namespace RobinhoodDesktop
         /// </summary>
         protected override void UpdateChartData()
         {
-            // Update the price text
-            UpdatePriceText((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]);
-
             // Update the base class
             base.UpdateChartData();
+
+            // Update the price text
+            UpdatePriceText((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]);
         }
 
         #region Constants
@@ -206,6 +206,9 @@ namespace RobinhoodDesktop
                     // Refresh the canvas to display the updated lines
                     Chart.stockPricePlot.Canvas.Refresh();
                 }
+
+                Chart.RefreshSourceData();
+
                 return false;
             }
 
@@ -236,6 +239,7 @@ namespace RobinhoodDesktop
                     //Chart.stockPricePlot.XAxis1.WorldMax = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax) - anchor).Ticks * percentChange)).Ticks;
                     //Chart.stockPricePlot.XAxis1.WorldMin = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin) - anchor).Ticks * percentChange)).Ticks;
                     Chart.UpdatePriceMinMax();
+                    Chart.RefreshSourceData();
                     Chart.stockPricePlot.Refresh();
                 }
 
@@ -246,6 +250,16 @@ namespace RobinhoodDesktop
 
         #region Variables
         /// <summary>
+        /// Callback function used to request data
+        /// </summary>
+        public DataAccessor.DataRequest DataRequest;
+
+        /// <summary>
+        /// The symbol (or name) associated with the chart
+        /// </summary>
+        public string Symbol = "";
+
+        /// <summary>
         /// The text item used to display the price
         /// </summary>
         private Label priceText;
@@ -254,6 +268,11 @@ namespace RobinhoodDesktop
         /// The text item used to display the delta in the stock price, and the time
         /// </summary>
         private Label changeText;
+
+        /// <summary>
+        /// Mutex used to syncrhonize access for data requests
+        /// </summary>
+        private System.Threading.Semaphore DataRequestMutex = new System.Threading.Semaphore(1, 1);
         #endregion
 
         #region Properties
@@ -274,6 +293,26 @@ namespace RobinhoodDesktop
                 float basePrice = (float)DailyData.Rows[GetTimeIndex(time, DailyData)][PRICE_DATA_TAG];
                 float percentChange = -1.0f + (price / basePrice);
                 changeText.Text = String.Format("{0}{1:c}({0}{2:P2}) {3:t} {3:MMM d} '{3:yy}", ((percentChange >= 0) ? "+" : ""), (price - basePrice), percentChange, time);
+            }
+        }
+
+        /// <summary>
+        /// Checks the source data to ensure enough is available to cover the intended range
+        /// </summary>
+        private void RefreshSourceData()
+        {
+            if(Source != null)
+            {
+                DateTime chartMin = new DateTime((long)stockPricePlot.XAxis1.WorldMin);
+                DateTime dataMin = (DateTime)Source.Rows[0][TIME_DATA_TAG];
+                DateTime dataMax = (DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG];
+                DateTime desiredDataMin = chartMin.AddHours(-((dataMax - chartMin).TotalHours * 2));
+                if((dataMin.Date > desiredDataMin.Date) && DataRequestMutex.WaitOne(0))
+                {
+                    DataAccessor.PriceDataCallback callback = SetChartData;
+                    callback += (data) => { DataRequestMutex.Release(); };
+                    this.DataRequest(Symbol, desiredDataMin, dataMax, TimeSpan.FromMinutes(1), callback);
+                }
             }
         }
         #endregion

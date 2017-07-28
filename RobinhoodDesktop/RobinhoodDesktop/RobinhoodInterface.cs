@@ -33,6 +33,7 @@ namespace RobinhoodDesktop
             { new TimeSpan(0, 5, 0), "5minute" },
             { new TimeSpan(1, 0, 0), "hour" },
             { new TimeSpan(24, 0, 0), "day" },
+            { new TimeSpan(7, 0, 0, 0), "week" },
         };
 
         private static readonly Dictionary<TimeSpan, string> HISTORY_SPANS = new Dictionary<TimeSpan, string>()
@@ -149,14 +150,14 @@ namespace RobinhoodDesktop
                     {
                         // Put together a single request
                         HistoryMutex.WaitOne();
-                        TimeSpan interval = getHistoryInterval(HistoryRequests[0].Interval);
-                        List<string> symbols = new List<string>() { HistoryRequests[0].Symbol };
-                        List<int> servicedIndices = new List<int>() { 0 };
                         DateTime start = HistoryRequests[0].Start;
                         DateTime end = HistoryRequests[0].End;
+                        TimeSpan interval = getHistoryInterval(HistoryRequests[0].Interval, getHistoryTimeSpan(start, end));
+                        List<string> symbols = new List<string>() { HistoryRequests[0].Symbol };
+                        List<int> servicedIndices = new List<int>() { 0 };
                         for(int i = 1; i < HistoryRequests.Count; i++)
                         {
-                            if(getHistoryInterval(HistoryRequests[i].Interval) == interval)
+                            if(getHistoryInterval(HistoryRequests[i].Interval, getHistoryTimeSpan(HistoryRequests[i].Start, HistoryRequests[i].End)) == interval)
                             {
                                 // Include this in the request
                                 symbols.Add(HistoryRequests[i].Symbol);
@@ -168,28 +169,39 @@ namespace RobinhoodDesktop
                         HistoryMutex.ReleaseMutex();
 
                         // Make the request
-                        var history = Client.DownloadHistory(symbols, HISTORY_INTERVALS[interval], HISTORY_SPANS[getHistoryTimeSpan(start, end)]).Result;
-
-                        // Return the data to the reqesting sources
-                        int servicedCount = 0;
-                        foreach(var stock in history)
+                        if(getHistoryTimeSpan(start, end) >= HISTORY_SPANS.ElementAt(HISTORY_SPANS.Count - 1).Key)
                         {
-                            // Put the data into a table
-                            DataTable dt = new DataTable();
-                            dt.Columns.Add("Time", typeof(DateTime));
-                            dt.Columns.Add("Price", typeof(float));
-                            foreach(var p in stock.HistoricalInfo)
-                            {
-                                dt.Rows.Add(p.BeginsAt.ToLocalTime(), (float)p.OpenPrice);
-                            }
+                            foreach(var s in servicedIndices) HistoryRequests[s].Callback(null);
+                        }
+                        else
+                        {
+                            var history = Client.DownloadHistory(symbols, HISTORY_INTERVALS[interval], HISTORY_SPANS[getHistoryTimeSpan(start, end)]).Result;
 
-                            // Pass the table back to the caller
-                            if(!HistoryRequests[servicedIndices[servicedCount]].Symbol.Equals(stock.Symbol))
+                            // Return the data to the reqesting sources
+                            int servicedCount = 0;
+                            foreach(var stock in history)
                             {
-                                throw new Exception("Response does not match the request");
+                                // Put the data into a table
+                                DataTable dt = new DataTable();
+                                dt.Columns.Add("Time", typeof(DateTime));
+                                dt.Columns.Add("Price", typeof(float));
+                                foreach(var p in stock.HistoricalInfo)
+                                {
+                                    DateTime t = (interval < new TimeSpan(1, 0, 0, 0)) ? p.BeginsAt.ToLocalTime() : p.BeginsAt.AddHours(9.5);
+                                    dt.Rows.Add(t, (float)p.OpenPrice);
+                                }
+
+                                // Add a final price
+                                dt.Rows.Add(stock.HistoricalInfo[stock.HistoricalInfo.Count - 1].BeginsAt.Add(interval).ToLocalTime(), stock.HistoricalInfo[stock.HistoricalInfo.Count - 1].ClosePrice);
+
+                                // Pass the table back to the caller
+                                if(!HistoryRequests[servicedIndices[servicedCount]].Symbol.Equals(stock.Symbol))
+                                {
+                                    throw new Exception("Response does not match the request");
+                                }
+                                HistoryRequests[servicedIndices[servicedCount]].Callback(dt);
+                                servicedCount++;
                             }
-                            HistoryRequests[servicedIndices[servicedCount]].Callback(dt);
-                            servicedCount++;
                         }
 
                         // Remove the processed requests from the queue
@@ -211,15 +223,21 @@ namespace RobinhoodDesktop
         /// Returns the closest supported interval
         /// </summary>
         /// <param name="interval">The desired inerval</param>
+        /// <param name="historyPeriod">The period over which history data will be requested</param>
         /// <returns>The closest supported interval</returns>
-        private TimeSpan getHistoryInterval(TimeSpan interval)
+        private TimeSpan getHistoryInterval(TimeSpan interval, TimeSpan historyPeriod)
         {
             TimeSpan supportedInterval = HISTORY_INTERVALS.ElementAt(0).Key;
+
+            // An API request of a year or more can not get request an interval smaller than a day
+            if(historyPeriod >= new TimeSpan(365 * 5, 0, 0, 0)) interval = new TimeSpan(7, 0, 0, 0);
+            else if(historyPeriod >= new TimeSpan(365, 0, 0, 0)) interval = new TimeSpan(1, 0, 0, 0);
+
             for(int idx = 0; idx < HISTORY_INTERVALS.Count; idx++)
             {
                 if(interval <= HISTORY_INTERVALS.ElementAt(idx).Key)
                 {
-                    supportedInterval = HISTORY_INTERVALS.ElementAt(0).Key;
+                    supportedInterval = HISTORY_INTERVALS.ElementAt(idx).Key;
                     break;
                 }
             }

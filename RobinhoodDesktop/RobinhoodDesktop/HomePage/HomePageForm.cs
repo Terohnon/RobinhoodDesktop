@@ -40,7 +40,7 @@ namespace RobinhoodDesktop.HomePage
             this.Controls.Add(UIList);
 
             Robinhood = new RobinhoodInterface();
-            DataAccessor.SetAccessor(Robinhood);
+            DataAccessor.SetAccessor(new DataTableCache(Robinhood));
 
             // Create the search box
             SearchHome = new SearchList();

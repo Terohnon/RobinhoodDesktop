@@ -15,6 +15,16 @@ namespace RobinhoodDesktop
         public delegate void PriceDataCallback(DataTable data);
 
         /// <summary>
+        /// A callback that is executed to request data
+        /// </summary>
+        /// <param name="symbol">The stock symbol to request data for</param>
+        /// <param name="start">The start time</param>
+        /// <param name="end">The end time</param>
+        /// <param name="interval">The requested interval between points in the returned data</param>
+        /// <param name="callback">The callback to execute once the data has been retrieved</param>
+        public delegate void DataRequest(string symbol, DateTime start, DateTime end, TimeSpan interval, DataAccessor.PriceDataCallback callback);
+
+        /// <summary>
         /// A callback that is executed when a search is completed
         /// </summary>
         /// <param name="results">The results of the search, sent as a symbol and full name pair</param>

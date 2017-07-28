@@ -15,10 +15,17 @@ namespace RobinhoodDesktop
 
             this.Canvas = new Panel();
             this.Chart = new StockChart();
+            Chart.Symbol = symbol;
+            Chart.DataRequest += (sym, start, end, interval, callback) => { DataAccessor.GetPriceHistory(sym, start, end, interval, callback); };
             Canvas.Controls.Add(Chart.Canvas);
+
+            // Request data to fill the stock chart
+            Chart.DataRequest(symbol, DateTime.Now.Date.AddHours(-48), DateTime.Now.Date.AddHours(16), new TimeSpan(0, 1, 0), Chart.SetChartData);
+            Chart.Canvas.HandleCreated += (sender, e) => { Chart.SetChartData(Chart.Source); };
 
             Canvas.Resize += Canvas_Resize;
         }
+
         #region Variables
         /// <summary>
         /// The stock symbol associated with this UI

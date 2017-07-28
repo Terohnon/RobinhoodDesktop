@@ -63,7 +63,7 @@ namespace RobinhoodDesktop
         public void SetChartData(DataTable data)
         {
             this.Source = data;
-            Canvas.BeginInvoke((Action)(() => { UpdateChartData(); }));
+            if((data != null) && Canvas.IsHandleCreated) Canvas.BeginInvoke((Action)(() => { UpdateChartData(); }));
         }
 
 
@@ -72,34 +72,37 @@ namespace RobinhoodDesktop
         /// </summary>
         protected virtual void UpdateChartData()
         {
-            TradingDateTimeAxis tradeAxis = (TradingDateTimeAxis)stockPricePlot.XAxis1;
-            priceLine.DataSource = Source;
-
-            // Set the initial view of the data to the last trading day
-            tradeAxis.WorldMax = (double)((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]).Date.AddHours(16).Ticks;
-            tradeAxis.WorldMin = tradeAxis.SparseWorldAdd((double)(new DateTime((long)tradeAxis.WorldMax)).Ticks, -(tradeAxis.EndTradingTime - tradeAxis.StartTradingTime).Ticks * 1.5);
-
-            // Create a data table which acts as a reference point for each day
-            DailyData = new DataTable();
-            DailyData.Columns.Add("Time", typeof(DateTime));
-            DailyData.Columns.Add("Price", typeof(float));
-            DailyData.Columns.Add("Min", typeof(float));
-            DailyData.Columns.Add("Max", typeof(float));
-            float dayPrice = (float)Source.Rows[0][PRICE_DATA_TAG];
-            for(DateTime time = ((DateTime)Source.Rows[0][TIME_DATA_TAG]).Date.AddHours(16); time <= ((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]).Date.AddHours(16); time = time.AddDays(1))
+            if(priceLine.DataSource != Source)
             {
-                int idx = GetTimeIndex(time);
-                if(((DateTime)Source.Rows[idx][TIME_DATA_TAG]).Date == time.Date)
-                {
-                    // Mark the time as the last trading time for the next day
-                    DailyData.Rows.Add(time.Date.AddHours(9.5), dayPrice, 0, 0);
-                    DailyData.Rows.Add(time.Date.AddHours(16), dayPrice, 0, 0);
+                TradingDateTimeAxis tradeAxis = (TradingDateTimeAxis)stockPricePlot.XAxis1;
+                priceLine.DataSource = Source;
 
-                    // Set the ending price of this day as the reference point of the next day
-                    dayPrice = (float)Source.Rows[idx][PRICE_DATA_TAG];
+                // Set the initial view of the data to the last trading day
+                tradeAxis.WorldMax = (double)((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]).Date.AddHours(16).Ticks;
+                tradeAxis.WorldMin = tradeAxis.SparseWorldAdd((double)(new DateTime((long)tradeAxis.WorldMax)).Ticks, -(tradeAxis.EndTradingTime - tradeAxis.StartTradingTime).Ticks * 1.5);
+
+                // Create a data table which acts as a reference point for each day
+                DailyData = new DataTable();
+                DailyData.Columns.Add("Time", typeof(DateTime));
+                DailyData.Columns.Add("Price", typeof(float));
+                DailyData.Columns.Add("Min", typeof(float));
+                DailyData.Columns.Add("Max", typeof(float));
+                float dayPrice = (float)Source.Rows[0][PRICE_DATA_TAG];
+                for(DateTime time = ((DateTime)Source.Rows[0][TIME_DATA_TAG]).Date.AddHours(16); time <= ((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]).Date.AddHours(16); time = time.AddDays(1))
+                {
+                    int idx = GetTimeIndex(time);
+                    if(((DateTime)Source.Rows[idx][TIME_DATA_TAG]).Date == time.Date)
+                    {
+                        // Mark the time as the last trading time for the next day
+                        DailyData.Rows.Add(time.Date.AddHours(9.5), dayPrice, 0, 0);
+                        DailyData.Rows.Add(time.Date.AddHours(16), dayPrice, 0, 0);
+
+                        // Set the ending price of this day as the reference point of the next day
+                        dayPrice = (float)Source.Rows[idx][PRICE_DATA_TAG];
+                    }
                 }
+                openLine.DataSource = DailyData;
             }
-            openLine.DataSource = DailyData;
 
             // Refresh the chart
             UpdatePriceMinMax();
