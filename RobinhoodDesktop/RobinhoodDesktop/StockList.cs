@@ -30,11 +30,13 @@ namespace RobinhoodDesktop
                 TickerLabel = new Label();
                 TickerLabel.Size = new System.Drawing.Size(50, 15);
                 TickerLabel.Location = new System.Drawing.Point(5, (this.Size.Height / 2) - (TickerLabel.Size.Height / 2));
+                TickerLabel.MouseUp += (sender, e) => { this.OnMouseUp(e); };
                 Controls.Add(TickerLabel);
 
                 SummaryChart = new StockChartBasic();
                 SummaryChart.Canvas.Size = new System.Drawing.Size(150, this.Size.Height);
                 SummaryChart.Canvas.Location = new System.Drawing.Point((TickerLabel.Location.X + TickerLabel.Size.Width) + 5, 0);
+                SummaryChart.Canvas.MouseUp += (sender, e) => { this.OnMouseUp(e); };
                 Controls.Add(SummaryChart.Canvas);
 
                 InfoLabel = new Label();
@@ -89,6 +91,11 @@ namespace RobinhoodDesktop
 
         #region Variables
         /// <summary>
+        /// Callback function to add a new UI element for the specified stock
+        /// </summary>
+        public SearchList.StockSymbolCallback AddStockUi;
+
+        /// <summary>
         /// The list of stocks this is representing
         /// </summary>
         public Dictionary<string, List<StockLine>> Stocks = new Dictionary<string, List<StockLine>>();
@@ -110,6 +117,25 @@ namespace RobinhoodDesktop
         /// </summary>
         /// <param name="symbol">The ticker symbol to add</param>
         public void Add(string group, string symbol)
+        {
+            if(this.IsHandleCreated)
+            {
+                this.BeginInvoke((Action)(() =>
+                {
+                    AddInternal(group, symbol);
+                }));
+            }
+            else
+            {
+                AddInternal(group, symbol);
+            }
+        }
+
+        /// <summary>
+        /// Adds a new symbol to the list
+        /// </summary>
+        /// <param name="symbol">The ticker symbol to add</param>
+        private void AddInternal(string group, string symbol)
         {
             // Ensure the symbol is not already in the list
             bool isNew = true;
@@ -134,6 +160,7 @@ namespace RobinhoodDesktop
             {
                 StockLine newLine = new StockLine(symbol);
                 newLine.Location = new System.Drawing.Point(5, (int)((Stocks.Count + 0.5) * (newLine.Height + 5)));
+                newLine.MouseUp += (sender, e) => { AddStockUi(symbol); };
                 stockList.Add(newLine);
                 this.Controls.Add(newLine);
                 this.Refresh();

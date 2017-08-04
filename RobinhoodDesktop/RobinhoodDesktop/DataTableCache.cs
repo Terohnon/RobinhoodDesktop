@@ -41,7 +41,10 @@ namespace RobinhoodDesktop
             {
                 Source.GetPriceHistory(symbol, start, end, interval, (rx) =>
                 {
-                    Cache.Add(symbol, rx);
+                    if(!Cache.ContainsKey(symbol))
+                    {
+                        Cache.Add(symbol, rx);
+                    }
                     callback(rx);
                 });
             }

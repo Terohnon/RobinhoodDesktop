@@ -35,6 +35,7 @@ namespace RobinhoodDesktop.HomePage
                 }
             };
             UIList.ControlAdded += UIList_Pack;
+            UIList.ControlRemoved += UIList_Pack;
             UIList.Location = new Point(340, 20);
             //Plot.SetChartData(GenerateExampleData());
             this.Controls.Add(UIList);
@@ -48,15 +49,7 @@ namespace RobinhoodDesktop.HomePage
             SearchHome.Location = new Point(20, 20);
             SearchHome.AutoSize = true;
             SearchHome.AddToWatchlist += (string symbol) => { StockListHome.Add("Watchlist", symbol); };
-            SearchHome.AddStockUi += (string symbol) => 
-            {
-                StockUI ui = new StockUI(symbol);
-                StockUIs.Add(ui);
-                StockChartPanel p = new StockChartPanel(ui.Canvas);
-                p.Size = new Size(UIList.Width - 10, 250);
-                p.Resize += UIList_Pack;
-                UIList.Controls.Add(p);
-            };
+            SearchHome.AddStockUi += CreateStockChart;
             Controls.Add(SearchHome);
 
             // Add test stock symbols to the list
@@ -65,13 +58,15 @@ namespace RobinhoodDesktop.HomePage
             StockListHome.Location = new Point(SearchHome.Location.X, SearchHome.Location.Y + 100);
             StockListHome.AutoScroll = true;
             StockListHome.Size = new Size(300, 300);
-            
+            StockListHome.AddStockUi += CreateStockChart;
+            Controls.Add(StockListHome);
+
             StockListHome.Add("Positions", "AMD");
             foreach(string symbol in Config.LocalWatchlist)
             {
                 StockListHome.Add("Watchlist", symbol);
             }
-            Controls.Add(StockListHome);
+            
 #endif
 
             // Set up the resize handler
@@ -110,6 +105,21 @@ namespace RobinhoodDesktop.HomePage
             }
 
             return dt;
+        }
+
+        private void CreateStockChart(string symbol)
+        {
+            StockUI ui = new StockUI(symbol);
+            StockUIs.Add(ui);
+            StockChartPanel p = new StockChartPanel(ui.Canvas);
+            p.Size = new Size(UIList.Width - 10, 250);
+            p.Resize += UIList_Pack;
+            p.CloseButton.MouseUp += (sender, e) => { UIList.Controls.Remove(p); };
+            ui.Chart.Updated += () => {
+                float currentPrice = (float)ui.Chart.Source.Rows[ui.Chart.Source.Rows.Count - 1][StockChart.PRICE_DATA_TAG];
+                float changePercent = (currentPrice / (float)ui.Chart.DailyData.Rows[ui.Chart.DailyData.Rows.Count - 1][StockChart.PRICE_DATA_TAG]) - 1.0f;
+                p.UpdateSummaryText(string.Format("{0} {1:c} ({2:P2})", ui.Symbol, currentPrice, changePercent)); };
+            UIList.Controls.Add(p);
         }
 
         private void UIList_Pack(object sender, System.EventArgs e)

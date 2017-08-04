@@ -81,6 +81,11 @@ namespace RobinhoodDesktop
         public System.Threading.Thread RobinhoodThread;
 
         /// <summary>
+        /// Variable used to shut down the task
+        /// </summary>
+        public bool Running = true;
+
+        /// <summary>
         /// The pending history requests
         /// </summary>
         private List<HistoryRequest> HistoryRequests = new List<HistoryRequest>();
@@ -96,7 +101,8 @@ namespace RobinhoodDesktop
         /// </summary>
         public void Close()
         {
-            RobinhoodThread.Abort();
+            Running = false;
+            RobinhoodThread.Join();
         }
 
         /// <summary>
@@ -140,7 +146,7 @@ namespace RobinhoodDesktop
         /// </summary>
         private void ThreadProcess()
         {
-            while(true)
+            while(Running)
             {
                 // Process the history requests
                 if((HistoryRequests.Count > 0) &&

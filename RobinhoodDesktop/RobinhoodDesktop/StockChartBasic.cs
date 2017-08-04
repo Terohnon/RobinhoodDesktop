@@ -37,6 +37,7 @@ namespace RobinhoodDesktop
 
             // Create the surface used to draw the plot
             stockPricePlot = new NPlot.Swf.InteractivePlotSurface2D();
+            stockPricePlot.SurfacePadding = 0;
             stockPricePlot.Add(priceLine);
             stockPricePlot.Add(openLine);
             stockPricePlot.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
@@ -51,7 +52,7 @@ namespace RobinhoodDesktop
             stockPricePlot.YAxis1.HideTickText = true;
             stockPricePlot.YAxis1.Color = System.Drawing.Color.Transparent;
             stockPricePlot.PlotBackColor = BACKGROUND_COLOR;
-            stockPricePlot.SurfacePadding = 5;
+            stockPricePlot.Canvas.HandleCreated += (sender, e) => { stockPricePlot.Canvas.BackColor = stockPricePlot.Canvas.Parent.BackColor; };
 
             stockPricePlot.Refresh();
         }

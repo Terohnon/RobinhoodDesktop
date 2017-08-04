@@ -76,6 +76,15 @@ namespace RobinhoodDesktop
         #endregion
 
         /// <summary>
+        ///  Updates the textbox providing the summary of the panel
+        ///  <param name="summary">The summary text to set</param>
+        /// </summary>
+        public void UpdateSummaryText(string summary)
+        {
+            SummaryLabel.Text = summary;
+        }
+
+        /// <summary>
         /// Handles the collapse action
         /// </summary>
         /// <param name="sender">The PictureBox object</param>

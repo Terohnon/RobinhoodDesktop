@@ -70,6 +70,9 @@ namespace RobinhoodDesktop
 
             // Update the price text
             UpdatePriceText((DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG]);
+
+            // Execute the callback action
+            Updated();
         }
 
         #region Constants
@@ -227,17 +230,14 @@ namespace RobinhoodDesktop
                 {
                     double percentChange = ((direction > 0) ? (1 / 1.2) : (1.2));
                     DateTime anchor = new DateTime((long)Chart.stockPricePlot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false));
-                    int anchorIdx = Chart.GetTimeIndex(anchor);
-                    int minIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin));
-                    int maxIdx = Chart.GetTimeIndex(new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax));
-                    minIdx = anchorIdx + (int)Math.Round((minIdx - anchorIdx) * percentChange);
-                    maxIdx = anchorIdx + (int)Math.Round((maxIdx - anchorIdx) * percentChange);
-                    minIdx = Math.Max(minIdx, 0);
-                    maxIdx = Math.Min(maxIdx, Chart.Source.Rows.Count - 1);
-                    Chart.stockPricePlot.XAxis1.WorldMin = (double)((DateTime)Chart.Source.Rows[minIdx][TIME_DATA_TAG]).Ticks;
-                    Chart.stockPricePlot.XAxis1.WorldMax = (double)((DateTime)Chart.Source.Rows[maxIdx][TIME_DATA_TAG]).Ticks;
-                    //Chart.stockPricePlot.XAxis1.WorldMax = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMax) - anchor).Ticks * percentChange)).Ticks;
-                    //Chart.stockPricePlot.XAxis1.WorldMin = (double)anchor.AddTicks((long)((new DateTime((long)Chart.stockPricePlot.XAxis1.WorldMin) - anchor).Ticks * percentChange)).Ticks;
+
+                    double ratio = ((double)X / Chart.stockPricePlot.PhysicalXAxis1Cache.PhysicalLength);
+                    if((direction < 0) && (Chart.stockPricePlot.XAxis1.WorldMax > ((DateTime)Chart.Source.Rows[Chart.Source.Rows.Count - 1][TIME_DATA_TAG]).Ticks))
+                    {
+                        ratio = 1.0;
+                    }
+                    Chart.stockPricePlot.XAxis1.IncreaseRange(percentChange - 1.0, ratio);
+
                     Chart.UpdatePriceMinMax();
                     Chart.RefreshSourceData();
                     Chart.stockPricePlot.Refresh();
@@ -246,13 +246,18 @@ namespace RobinhoodDesktop
                 return false;
             }
         }
-        #endregion
+#endregion
 
-        #region Variables
+#region Variables
         /// <summary>
         /// Callback function used to request data
         /// </summary>
         public DataAccessor.DataRequest DataRequest;
+
+        /// <summary>
+        /// Callback function that is executed when the chart receives updated data
+        /// </summary>
+        public Action Updated;
 
         /// <summary>
         /// The symbol (or name) associated with the chart
@@ -273,12 +278,17 @@ namespace RobinhoodDesktop
         /// Mutex used to syncrhonize access for data requests
         /// </summary>
         private System.Threading.Semaphore DataRequestMutex = new System.Threading.Semaphore(1, 1);
-        #endregion
 
-        #region Properties
-        #endregion
+        /// <summary>
+        /// Stores the minimum data range that has been requested
+        /// </summary>
+        private DateTime RequestedDateMin = DateTime.MaxValue;
+#endregion
 
-        #region Utility Functions
+#region Properties
+#endregion
+
+#region Utility Functions
         /// <summary>
         /// Updates the text describing the price at the given time
         /// </summary>
@@ -307,14 +317,15 @@ namespace RobinhoodDesktop
                 DateTime dataMin = (DateTime)Source.Rows[0][TIME_DATA_TAG];
                 DateTime dataMax = (DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG];
                 DateTime desiredDataMin = chartMin.AddHours(-((dataMax - chartMin).TotalHours * 2));
-                if((dataMin.Date > desiredDataMin.Date) && DataRequestMutex.WaitOne(0))
+                if((dataMin.Date > desiredDataMin.Date) && (desiredDataMin < RequestedDateMin) && DataRequestMutex.WaitOne(0))
                 {
                     DataAccessor.PriceDataCallback callback = SetChartData;
                     callback += (data) => { DataRequestMutex.Release(); };
+                    RequestedDateMin = desiredDataMin;
                     this.DataRequest(Symbol, desiredDataMin, dataMax, TimeSpan.FromMinutes(1), callback);
                 }
             }
         }
-        #endregion
+#endregion
     }
 }

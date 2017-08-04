@@ -60,17 +60,22 @@ namespace RobinhoodDesktop
         /// <returns>The loaded object</returns>
         public static UserConfig Load(string filePath)
         {
-            UserConfig cfg;
+            UserConfig cfg = null;
 
-            if(File.Exists(filePath))
+            try
             {
-                using(var stream = System.IO.File.OpenRead(filePath))
+                if(File.Exists(filePath))
                 {
-                    var serializer = new XmlSerializer(typeof(UserConfig));
-                    cfg = serializer.Deserialize(stream) as UserConfig;
+                    using(var stream = System.IO.File.OpenRead(filePath))
+                    {
+                        var serializer = new XmlSerializer(typeof(UserConfig));
+                        cfg = serializer.Deserialize(stream) as UserConfig;
+                    }
                 }
             }
-            else
+            catch(Exception ex) { }
+            
+            if(cfg == null)
             {
                 cfg = new UserConfig();
             }
