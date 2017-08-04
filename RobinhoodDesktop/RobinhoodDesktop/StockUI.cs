@@ -26,6 +26,20 @@ namespace RobinhoodDesktop
             Canvas.Resize += Canvas_Resize;
         }
 
+        #region Types
+        public struct StockUIConfig
+        {
+            public string Symbol;
+            public int Height;
+
+            public StockUIConfig(StockUI ui)
+            {
+                this.Symbol = ui.Symbol;
+                this.Height = ui.Canvas.Height;
+            }
+        }
+        #endregion
+
         #region Variables
         /// <summary>
         /// The stock symbol associated with this UI
@@ -52,6 +66,28 @@ namespace RobinhoodDesktop
         /// </summary>
         public PictureBox SellButton;
         #endregion
+
+        /// <summary>
+        /// Returns a new object containing the configuration
+        /// </summary>
+        /// <returns></returns>
+        public StockUIConfig SaveConfig()
+        {
+            return new StockUIConfig(this);
+        }
+
+        /// <summary>
+        /// Creates a stock UI object from a configuration
+        /// </summary>
+        /// <param name="cfg">The configuration</param>
+        /// <returns>The corresponding stock UI object</returns>
+        public static StockUI LoadConfig(StockUIConfig cfg)
+        {
+            StockUI newUi = new StockUI(cfg.Symbol);
+            newUi.Canvas.Size = new System.Drawing.Size(newUi.Canvas.Width, cfg.Height);
+
+            return newUi;
+        }
 
         /// <summary>
         /// Callback that is executed when the UI is resized

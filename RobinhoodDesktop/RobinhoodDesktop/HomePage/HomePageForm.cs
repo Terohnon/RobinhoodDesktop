@@ -17,12 +17,13 @@ namespace RobinhoodDesktop.HomePage
         {
             InitializeComponent();
             this.FormClosing += HomePageForm_FormClosing;
-
-            //HomePage.AccountSummaryChart accountChart = new HomePage.AccountSummaryChart();
-            //accountChart.Size = new Size(this.Width - 20, this.Height - 20);
-            //this.Controls.Add(accountChart);
-
+            
+            // Load the configuration
             this.Config = UserConfig.Load(UserConfig.CONFIG_FILE);
+
+            // Create the interface to the stock data
+            Robinhood = new RobinhoodInterface();
+            DataAccessor.SetAccessor(new DataTableCache(Robinhood));
 
             UIList = new Panel();
             UIList.HorizontalScroll.Maximum = 0;
@@ -37,11 +38,14 @@ namespace RobinhoodDesktop.HomePage
             UIList.ControlAdded += UIList_Pack;
             UIList.ControlRemoved += UIList_Pack;
             UIList.Location = new Point(340, 20);
+            foreach(var configObj in Config.StockCharts)
+            {
+                CreateStockChart(StockUI.LoadConfig(configObj));
+            }
             //Plot.SetChartData(GenerateExampleData());
             this.Controls.Add(UIList);
 
-            Robinhood = new RobinhoodInterface();
-            DataAccessor.SetAccessor(new DataTableCache(Robinhood));
+            
 
             // Create the search box
             SearchHome = new SearchList();
@@ -110,6 +114,10 @@ namespace RobinhoodDesktop.HomePage
         private void CreateStockChart(string symbol)
         {
             StockUI ui = new StockUI(symbol);
+            CreateStockChart(ui);
+        }
+        private void CreateStockChart(StockUI ui)
+        {
             StockUIs.Add(ui);
             StockChartPanel p = new StockChartPanel(ui.Canvas);
             p.Size = new Size(UIList.Width - 10, 250);
@@ -118,7 +126,8 @@ namespace RobinhoodDesktop.HomePage
             ui.Chart.Updated += () => {
                 float currentPrice = (float)ui.Chart.Source.Rows[ui.Chart.Source.Rows.Count - 1][StockChart.PRICE_DATA_TAG];
                 float changePercent = (currentPrice / (float)ui.Chart.DailyData.Rows[ui.Chart.DailyData.Rows.Count - 1][StockChart.PRICE_DATA_TAG]) - 1.0f;
-                p.UpdateSummaryText(string.Format("{0} {1:c} ({2:P2})", ui.Symbol, currentPrice, changePercent)); };
+                p.UpdateSummaryText(string.Format("{0} {1:c} ({2:P2})", ui.Symbol, currentPrice, changePercent));
+            };
             UIList.Controls.Add(p);
         }
 
@@ -146,6 +155,11 @@ namespace RobinhoodDesktop.HomePage
             foreach(var stock in StockListHome.Stocks["Watchlist"])
             {
                 Config.LocalWatchlist.Add(stock.Symbol);
+            }
+            Config.StockCharts.Clear();
+            foreach(var chart in StockUIs)
+            {
+                Config.StockCharts.Add(chart.SaveConfig());
             }
 
             // Save the current user configuration

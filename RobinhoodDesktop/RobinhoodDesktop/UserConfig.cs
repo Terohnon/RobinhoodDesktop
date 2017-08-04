@@ -35,6 +35,11 @@ namespace RobinhoodDesktop
         /// This is kept local to this application.
         /// </summary>
         public List<string> LocalWatchlist = new List<string>();
+
+        /// <summary>
+        /// A list of the open stock charts, and the corresponding options.
+        /// </summary>
+        public List<StockUI.StockUIConfig> StockCharts = new List<StockUI.StockUIConfig>();
         #endregion
 
         /// <summary>
