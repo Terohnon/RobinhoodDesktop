@@ -24,6 +24,7 @@ namespace RobinhoodDesktop.HomePage
             // Create the interface to the stock data
             Robinhood = new RobinhoodInterface();
             DataAccessor.SetAccessor(new DataTableCache(Robinhood));
+            Broker.SetBroker(Robinhood);
 
             UIList = new Panel();
             UIList.HorizontalScroll.Maximum = 0;
@@ -49,8 +50,8 @@ namespace RobinhoodDesktop.HomePage
 
             // Create the search box
             SearchHome = new SearchList();
-            SearchHome.Size = new Size(300, 50);
-            SearchHome.Location = new Point(20, 20);
+            SearchHome.Size = new Size(270, 50);
+            SearchHome.Location = new Point(50, 20);
             SearchHome.AutoSize = true;
             SearchHome.AddToWatchlist += (string symbol) => { StockListHome.Add("Watchlist", symbol); };
             SearchHome.AddStockUi += CreateStockChart;
@@ -70,12 +71,23 @@ namespace RobinhoodDesktop.HomePage
             {
                 StockListHome.Add("Watchlist", symbol);
             }
-            
+
 #endif
+            // Create the menu
+            Menu = new MenuBar();
+            Menu.ToggleButton.Location = new Point(20, 20);
+            Menu.LogIn.RememberLogIn.Checked = Config.RememberLogin;
+            Controls.Add(Menu.ToggleButton);
 
             // Set up the resize handler
             this.ResizeEnd += HomePageForm_ResizeEnd;
             HomePageForm_ResizeEnd(this, EventArgs.Empty);
+
+            // Sign in if authentification is available
+            if(Config.RememberLogin && !string.IsNullOrEmpty(Config.AuthenticationToken))
+            {
+                Broker.SignIn(Config.AuthenticationToken);
+            }
         }
 
         #region Variables
@@ -85,6 +97,7 @@ namespace RobinhoodDesktop.HomePage
         public UserConfig Config;
         public List<StockUI> StockUIs = new List<StockUI>();
         public Panel UIList;
+        public MenuBar Menu;
         #endregion
 
         private static System.Data.DataTable GenerateExampleData()
@@ -160,6 +173,12 @@ namespace RobinhoodDesktop.HomePage
             foreach(var chart in StockUIs)
             {
                 Config.StockCharts.Add(chart.SaveConfig());
+            }
+
+            Config.RememberLogin = Menu.LogIn.RememberLogIn.Checked;
+            if(Config.RememberLogin && Broker.IsSignedIn())
+            {
+                Config.AuthenticationToken = Broker.GetAuthenticationToken();
             }
 
             // Save the current user configuration

@@ -8,7 +8,7 @@ using BasicallyMe.RobinhoodNet;
 
 namespace RobinhoodDesktop
 {
-    public class RobinhoodInterface : DataAccessor.DataAccessorInterface
+    public class RobinhoodInterface : DataAccessor.DataAccessorInterface, Broker.BrokerInterface
     {
         public RobinhoodInterface()
         {
@@ -76,6 +76,11 @@ namespace RobinhoodDesktop
         public RobinhoodClient Client;
 
         /// <summary>
+        /// The name of the current signed-in user
+        /// </summary>
+        public string UserName;
+
+        /// <summary>
         /// The thread used to process the requests
         /// </summary>
         public System.Threading.Thread RobinhoodThread;
@@ -105,6 +110,7 @@ namespace RobinhoodDesktop
             RobinhoodThread.Join();
         }
 
+        #region DataAccessor
         /// <summary>
         /// Requests price history data for a stock
         /// </summary>
@@ -140,7 +146,66 @@ namespace RobinhoodDesktop
                     callback(searchResult);
                 });
         }
+        #endregion
 
+        #region Broker
+        /// <summary>
+        /// Indicates if the interface is currently logged in to an account
+        /// </summary>
+        /// <returns>True if logged in to an account</returns>
+        public bool IsSignedIn()
+        {
+            return Client.isAuthenticated;
+        }
+
+        /// <summary>
+        /// Logs in to an account
+        /// </summary>
+        /// <param name="username">The account username (email address)</param>
+        /// <param name="password">The account password</param>
+        public void SignIn(string username, string password)
+        {
+            Client.Authenticate(username, password);
+        }
+
+        /// <summary>
+        /// Signs in to an account based on a stored token
+        /// </summary>
+        /// <param name="token">The account session token</param>
+        public void SignIn(string token)
+        {
+            Client.Authenticate(token);
+        }
+
+        /// <summary>
+        /// Logs the user out of the brokerage account
+        /// </summary>
+        public void SignOut()
+        {
+            // Cannot sign out, so simply create a new client which isn't signed in
+            Client = new RobinhoodClient();
+        }
+
+        /// <summary>
+        /// Returns the authentication token associated with the current user's session
+        /// </summary>
+        /// <returns>The authentication token</returns>
+        public string GetAuthenticationToken()
+        {
+            return Client.AuthToken;
+        }
+
+        /// <summary>
+        /// Returns the name of the currently authenticated user
+        /// </summary>
+        /// <returns>The current username</returns>
+        public string GetUsername()
+        {
+            return UserName;
+        }
+        #endregion
+
+        #region Thread
         /// <summary>
         /// The function executed as the Robinhood interface
         /// </summary>
@@ -224,7 +289,9 @@ namespace RobinhoodDesktop
                 System.Threading.Thread.Sleep(5);
             }
         }
+        #endregion
 
+        #region Utilities
         /// <summary>
         /// Returns the closest supported interval
         /// </summary>
@@ -272,5 +339,6 @@ namespace RobinhoodDesktop
 
             return supported;
         }
+        #endregion
     }
 }

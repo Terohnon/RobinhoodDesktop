@@ -41,8 +41,8 @@ namespace RobinhoodDesktop
             // Create the text controls
             priceText = new Label();
             priceText.Location = new System.Drawing.Point((stockPricePlot.Canvas.Width - 100) / 2, 10);
-            priceText.Font = new System.Drawing.Font("monoprice", 12.0f, System.Drawing.FontStyle.Regular);
-            priceText.ForeColor = TEXT_COLOR;
+            priceText.Font = new System.Drawing.Font(GuiStyle.FONT_NAME, 12.0f, System.Drawing.FontStyle.Regular);
+            priceText.ForeColor = GuiStyle.TEXT_COLOR;
             priceText.BackColor = System.Drawing.Color.Transparent;
             priceText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             stockPricePlot.Canvas.Controls.Add(priceText);
@@ -50,8 +50,8 @@ namespace RobinhoodDesktop
             changeText = new Label();
             changeText.Location = new Point(priceText.Location.X - 80, priceText.Location.Y + 25);
             changeText.Size = new Size(260, changeText.Size.Height);
-            changeText.Font = new System.Drawing.Font("monoprice", 9.0f, System.Drawing.FontStyle.Regular);
-            changeText.ForeColor = TEXT_COLOR;
+            changeText.Font = new System.Drawing.Font(GuiStyle.FONT_NAME, 9.0f, System.Drawing.FontStyle.Regular);
+            changeText.ForeColor = GuiStyle.TEXT_COLOR;
             changeText.BackColor = System.Drawing.Color.Transparent;
             changeText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             stockPricePlot.Canvas.Controls.Add(changeText);
@@ -109,12 +109,12 @@ namespace RobinhoodDesktop
                 /// <summary>
                 /// The pen used to draw the time line
                 /// </summary>
-                public System.Drawing.Pen TimePen = new System.Drawing.Pen(PRICE_COLOR_POSITIVE, 2.0f);
+                public System.Drawing.Pen TimePen = new System.Drawing.Pen(GuiStyle.PRICE_COLOR_POSITIVE, 2.0f);
 
                 /// <summary>
                 /// The pen used to draw the price lines
                 /// </summary>
-                public System.Drawing.Pen PricePen = new System.Drawing.Pen(GUIDE_COLOR, 1.5f);
+                public System.Drawing.Pen PricePen = new System.Drawing.Pen(GuiStyle.GUIDE_COLOR, 1.5f);
 
                 /// <summary>
                 /// The canvas used to draw additional overlay lines

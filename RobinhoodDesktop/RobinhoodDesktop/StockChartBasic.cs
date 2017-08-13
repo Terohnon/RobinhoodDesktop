@@ -23,14 +23,14 @@ namespace RobinhoodDesktop
             priceLine.DataSource = emptyTable;
             priceLine.AbscissaData = TIME_DATA_TAG;
             priceLine.OrdinateData = PRICE_DATA_TAG;
-            priceLine.Color = PRICE_COLOR_POSITIVE;
+            priceLine.Color = GuiStyle.PRICE_COLOR_POSITIVE;
 
             // Create the origin open price line
             openLine = new LinePlot();
             openLine.DataSource = emptyTable;
             openLine.AbscissaData = TIME_DATA_TAG;
             openLine.OrdinateData = PRICE_DATA_TAG;
-            openLine.Pen = new System.Drawing.Pen(GUIDE_COLOR);
+            openLine.Pen = new System.Drawing.Pen(GuiStyle.GUIDE_COLOR);
             openLine.Pen.DashPattern = new float[] { 2.0f, 2.0f };
             openLine.Pen.DashCap = System.Drawing.Drawing2D.DashCap.Round;
             openLine.Pen.Width = 1.5f;
@@ -51,7 +51,7 @@ namespace RobinhoodDesktop
             stockPricePlot.XAxis1 = tradeAxis;
             stockPricePlot.YAxis1.HideTickText = true;
             stockPricePlot.YAxis1.Color = System.Drawing.Color.Transparent;
-            stockPricePlot.PlotBackColor = BACKGROUND_COLOR;
+            stockPricePlot.PlotBackColor = GuiStyle.BACKGROUND_COLOR;
             stockPricePlot.Canvas.HandleCreated += (sender, e) => { stockPricePlot.Canvas.BackColor = stockPricePlot.Canvas.Parent.BackColor; };
 
             stockPricePlot.Refresh();
@@ -111,26 +111,6 @@ namespace RobinhoodDesktop
         }
 
         #region Constants
-        /// <summary>
-        /// The color of the price information when it is positive
-        /// </summary>
-        public static readonly System.Drawing.Color PRICE_COLOR_POSITIVE = System.Drawing.Color.FromArgb(255, 0, 173, 145);
-
-        /// <summary>
-        /// The color of text
-        /// </summary>
-        public static readonly System.Drawing.Color TEXT_COLOR = System.Drawing.Color.FromArgb(255, 255, 255, 255);
-
-        /// <summary>
-        /// The color of guidelines and text
-        /// </summary>
-        public static readonly System.Drawing.Color GUIDE_COLOR = System.Drawing.Color.FromArgb(255, 56, 66, 71);
-
-        /// <summary>
-        /// The background color
-        /// </summary>
-        public static readonly System.Drawing.Color BACKGROUND_COLOR = System.Drawing.Color.FromArgb(255, 17, 27, 32);
-
         /// <summary>
         /// The tag identifying a time entry in a data table
         /// </summary>

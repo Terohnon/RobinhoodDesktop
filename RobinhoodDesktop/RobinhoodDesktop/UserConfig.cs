@@ -31,6 +31,11 @@ namespace RobinhoodDesktop
         public bool RememberLogin;
 
         /// <summary>
+        /// The authentication token used to log in to the brokerage
+        /// </summary>
+        public string AuthenticationToken;
+
+        /// <summary>
         /// A list of stock symbols being watched. 
         /// This is kept local to this application.
         /// </summary>

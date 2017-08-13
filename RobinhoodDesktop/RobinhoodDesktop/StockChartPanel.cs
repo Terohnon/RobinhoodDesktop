@@ -17,7 +17,7 @@ namespace RobinhoodDesktop
             SummaryBarPanel = new Panel();
             SummaryBarPanel.Size = new System.Drawing.Size(600, 25);
             SummaryLabel = new Label();
-            SummaryLabel.ForeColor = StockChart.TEXT_COLOR;
+            SummaryLabel.ForeColor = GuiStyle.TEXT_COLOR;
             SummaryLabel.Size = new System.Drawing.Size(200, 20);
             SummaryLabel.BackColor = System.Drawing.Color.Transparent;
             SummaryLabel.Location = new System.Drawing.Point(10, 5);
