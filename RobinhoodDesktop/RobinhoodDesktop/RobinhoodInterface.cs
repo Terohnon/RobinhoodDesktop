@@ -461,21 +461,27 @@ namespace RobinhoodDesktop
         {
             Client.DownloadAllAccounts().ContinueWith((accounts) =>
             {
-                RobinhoodAccount = accounts.Result[0];
-                Broker.Account account = new Broker.Account();
-                account.BuyingPower = RobinhoodAccount.BuyingPower;
-                account.Cash = RobinhoodAccount.Cash;
-                account.CashAvailableForWithdrawal = RobinhoodAccount.Cash - accounts.Result[0].CashHeldForOrders;
-                account.CashHeldForOrders = RobinhoodAccount.CashHeldForOrders;
-                account.UnclearedDeposits = RobinhoodAccount.UnclearedDeposits;
-                account.UnsettledFunds = RobinhoodAccount.UnsettledFunds;
-
-                Client.DownloadSinglePortfolio(RobinhoodAccount.AccountNumber).ContinueWith((portfolio) =>
+                if(accounts.IsCompleted && !accounts.IsFaulted)
                 {
-                    AccountPortfolio p = portfolio.Result;
-                    account.TotalValue = p.Equity;
-                    callback(account);
-                });
+                    RobinhoodAccount = accounts.Result[0];
+                    Broker.Account account = new Broker.Account();
+                    account.BuyingPower = RobinhoodAccount.BuyingPower;
+                    account.Cash = RobinhoodAccount.Cash;
+                    account.CashAvailableForWithdrawal = RobinhoodAccount.Cash - accounts.Result[0].CashHeldForOrders;
+                    account.CashHeldForOrders = RobinhoodAccount.CashHeldForOrders;
+                    account.UnclearedDeposits = RobinhoodAccount.UnclearedDeposits;
+                    account.UnsettledFunds = RobinhoodAccount.UnsettledFunds;
+
+                    Client.DownloadSinglePortfolio(RobinhoodAccount.AccountNumber).ContinueWith((portfolio) =>
+                    {
+                        AccountPortfolio p = portfolio.Result;
+                        account.TotalValue = p.Equity;
+                        callback(account);
+                    });
+                } else
+                {
+                    callback(null);
+                }
             });
         }
 

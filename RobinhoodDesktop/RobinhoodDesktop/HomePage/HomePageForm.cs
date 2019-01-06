@@ -226,7 +226,7 @@ namespace RobinhoodDesktop.HomePage
 
         private void CreateStockChart(string symbol)
         {
-            if(!System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift))
+            //if(!System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift))
             {
                 // Check if a chart already exists for the stock
                 foreach(var stock in StockUIs)

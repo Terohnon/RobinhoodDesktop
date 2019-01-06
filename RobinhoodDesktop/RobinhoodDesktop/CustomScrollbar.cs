@@ -224,6 +224,13 @@ namespace CustomControls {
 
         protected override void OnPaint(PaintEventArgs e) {
 
+            // Check if a resize event has caused the scroll bar to appear off the screen
+            if((this.Parent.Bounds.Right < this.Bounds.Right) ||
+                (this.Parent.Bounds.Bottom < this.Bounds.Bottom))
+            {
+                return;
+            }
+
             e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
 
             if (UpArrowImage != null) {
