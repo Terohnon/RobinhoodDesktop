@@ -571,13 +571,13 @@ namespace RobinhoodDesktop
                 TimeInForce = TimeInForce.GoodForDay,
                 Trigger = isStopOrder ? TriggerType.Stop : TriggerType.Immediate
             };
-            /*
+            
             Client.PlaceOrder(newOrder).ContinueWith((result) =>
             {
                 OrderSnapshot orderResult = result.Result;
                 ActiveOrders.Add(new RobinhoodOrder(order.Symbol, orderResult));
             });
-            */
+            
         }
 
         /// <summary>
