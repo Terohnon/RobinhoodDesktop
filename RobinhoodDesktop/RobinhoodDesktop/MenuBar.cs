@@ -138,12 +138,12 @@ namespace RobinhoodDesktop
             {
                 menu.OnShow += () =>
                 {
-                    this.ButtonText = (Broker.IsSignedIn() ? "Log Out" : "Sign In");
+                    this.ButtonText = (Broker.Instance.IsSignedIn() ? "Log Out" : "Sign In");
                 };
 
                 this.MouseUp += (sender, e) =>
                 {
-                    if(!Broker.IsSignedIn())
+                    if(!Broker.Instance.IsSignedIn())
                     {
                         // Show the log in screen, and bring it to the front
                         menu.MenuPanel.Parent.Controls.Add(menu.LogIn.Background);
@@ -152,7 +152,7 @@ namespace RobinhoodDesktop
                     }
                     else
                     {
-                        Broker.SignOut();
+                        Broker.Instance.SignOut();
                     }
                 };
 
@@ -163,7 +163,7 @@ namespace RobinhoodDesktop
                 };
                 menu.LogIn.LogInButton.MouseUp += (sender, e) =>
                 {
-                    if(Broker.IsSignedIn())
+                    if(Broker.Instance.IsSignedIn())
                     {
                         menu.MenuPanel.Parent.Controls.Remove(menu.LogIn.Background);
                         menu.Hide();

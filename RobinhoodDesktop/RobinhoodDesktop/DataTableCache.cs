@@ -48,12 +48,26 @@ namespace RobinhoodDesktop
                     callback(rx);
                 });
             }
-            else if((data.Rows.Count == 0) || ((DateTime)data.Rows[0][StockChart.TIME_DATA_TAG] > start) || ((DateTime)data.Rows[data.Rows.Count - 1][StockChart.TIME_DATA_TAG] < end))
+            else if((data.Rows.Count == 0) || 
+                    (start < (DateTime)data.Rows[0][StockChart.TIME_DATA_TAG]) || 
+                    (end > (DateTime)data.Rows[data.Rows.Count - 1][StockChart.TIME_DATA_TAG]))
             {
-                DateTime newStart = new DateTime(Math.Min(((DateTime)data.Rows[0][StockChart.TIME_DATA_TAG]).Ticks, start.Ticks));
-                DateTime newEnd = new DateTime(Math.Max(((DateTime)data.Rows[0][StockChart.TIME_DATA_TAG]).Ticks, end.Ticks));
+                DateTime newStart = (DateTime)data.Rows[data.Rows.Count - 1][StockChart.TIME_DATA_TAG];
+                DateTime newEnd = (DateTime)data.Rows[0][StockChart.TIME_DATA_TAG];
+
+                if(start < (DateTime)data.Rows[0][StockChart.TIME_DATA_TAG])
+                {
+                    // Requesting further back into history
+                    newStart = start;
+                }
+                if(end > (DateTime)data.Rows[data.Rows.Count - 1][StockChart.TIME_DATA_TAG])
+                {
+                    // Requesting more recent data
+                    newEnd = end;
+                }
                 Source.GetPriceHistory(symbol, newStart, newEnd, interval, (rx) =>
                 {
+                    // Merge the new data into the cached table
                     int cacheIdx = 0;
                     for(int i = 0; (rx != null) && i < rx.Rows.Count; i++)
                     {
@@ -96,6 +110,26 @@ namespace RobinhoodDesktop
         public void Search(string symbol, DataAccessor.SearchCallback callback)
         {
             Source.Search(symbol, callback);
+        }
+
+        /// <summary>
+        /// Requests the current price for a list of stocks
+        /// </summary>
+        /// <param name="symbols">The symbols to get quotes for</param>
+        /// <param name="callback">Callback executed with the results</param>
+        public void GetQuote(List<string> symbols, DataAccessor.PriceDataCallback callback)
+        {
+            Source.GetQuote(symbols, callback);
+        }
+
+        /// <summary>
+        /// Retrieves information about a stock
+        /// </summary>
+        /// <param name="symbol">The symbol to retrieve the info for</param>
+        /// <param name="callback">Callback executed after the information has been retrieved</param>
+        public void GetStockInfo(string symbol, DataAccessor.StockInfoCallback callback)
+        {
+            Source.GetStockInfo(symbol, callback);
         }
     }
 }

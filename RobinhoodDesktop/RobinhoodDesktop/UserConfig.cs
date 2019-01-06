@@ -44,7 +44,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// A list of the open stock charts, and the corresponding options.
         /// </summary>
-        public List<StockUI.StockUIConfig> StockCharts = new List<StockUI.StockUIConfig>();
+        public List<StockChartPanel.StockUIConfig> StockCharts = new List<StockChartPanel.StockUIConfig>();
         #endregion
 
         /// <summary>

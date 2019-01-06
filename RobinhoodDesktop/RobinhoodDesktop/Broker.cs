@@ -47,6 +47,121 @@ namespace RobinhoodDesktop
             /// </summary>
             /// <returns>The current username</returns>
             string GetUsername();
+
+            /// <summary>
+            /// Retrieves the account information
+            /// </summary>
+            /// <param name="callback">Callback executed after the information has been retrieved</param>
+            void GetAccountInfo(AccountCallback callback); 
+
+            /// <summary>
+            /// Returns a list of all stocks currently owned
+            /// </summary>
+            /// <returns>A list of owned stocks</returns>
+            Dictionary<string, decimal> GetPositions();
+
+            /// <summary>
+            /// Returns more information about a current position
+            /// </summary>
+            /// <param name="symbol">The symbol to request the position for</param>
+            /// <param name="callback">The callback to execute with the requested data</param>
+            void GetPositionInfo(string symbol, PositionCallback callback);
+
+            /// <summary>
+            /// Retrives a list of the current orders
+            /// </summary>
+            /// <returns>The list of orders</returns>
+            List<Order> GetOrders();
+
+            /// <summary>
+            /// Submits an order to be executed by the broker
+            /// </summary>
+            /// <param name="order">The order to submit</param>
+            void SubmitOrder(Order order);
+
+            /// <summary>
+            /// Cancels an outstanding order for the specified symbol
+            /// </summary>
+            /// <param name="symbol">The symbol to cancel the order for</param>
+            void CancelOrder(string symbol);
+
+            /// <summary>
+            /// Returns a list of stocks being watched
+            /// </summary>
+            /// <returns>A watchlist registered with the broker</returns>
+            List<string> GetWatchlist();
+
+            /// <summary>
+            /// Modifies a watchlist
+            /// </summary>
+            /// <param name="stock">The stock symbol to modify</param>
+            /// <param name="action">Add -> Adds the stock to the watchlist
+            ///                      Remove -> Deletes the stock from the watchlist
+            ///                      Move[index] -> Moves the stock to the specified index</param>
+            void ModifyWatchlist(string stock, string action);
+        }
+
+        public class Account
+        {
+            public decimal Cash;
+            public decimal TotalValue;
+            public decimal BuyingPower;
+            public decimal UnsettledFunds;
+            public decimal CashHeldForOrders;
+            public decimal UnclearedDeposits;
+            public decimal CashAvailableForWithdrawal;
+        }
+
+        /// <summary>
+        /// Callback executed after retrieving account information
+        /// </summary>
+        /// <param name="account">The account information</param>
+        public delegate void AccountCallback(Account account);
+
+        /// <summary>
+        /// Callback executed after retrieving information about a position
+        /// </summary>
+        /// <param name="position">The position information</param>
+        public delegate void PositionCallback(Position position);
+
+        public class Position
+        {
+            public string Symbol;
+            public decimal AverageBuyPrice;
+            public decimal Shares;
+        }
+
+        public class Order
+        {
+            public enum OrderStatus
+            {
+                PENDING,
+                COMPLETE,
+                FAILED,
+                CANCELLED
+            };
+            public enum OrderType
+            {
+                MARKET,
+                LIMIT,
+                STOP,
+                STOP_LIMIT
+            };
+            public enum BuySellType
+            {
+                BUY,
+                SELL
+            }
+
+
+            public string Symbol;
+            public OrderStatus Status;
+            public OrderType Type;
+            public BuySellType BuySell;
+            public decimal Quantity;
+            public decimal AveragePrice;
+            public decimal StopPrice;
+            public decimal LimitPrice;
         }
         #endregion
 
@@ -54,63 +169,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The instance of the broker being used
         /// </summary>
-        private static BrokerInterface BrokerInstance;
-        #endregion
-
-        #region Static Interface
-        /// <summary>
-        /// Indicates if the interface is currently logged in to an account
-        /// </summary>
-        /// <returns>True if logged in to an account</returns>
-        public static bool IsSignedIn()
-        {
-            return BrokerInstance.IsSignedIn();
-        }
-
-        /// <summary>
-        /// Logs in to an account
-        /// </summary>
-        /// <param name="username">The account username (email address)</param>
-        /// <param name="password">The account password</param>
-        public static void SignIn(string username, string password)
-        {
-            BrokerInstance.SignIn(username, password);
-        }
-
-        /// <summary>
-        /// Signs in to an account based on a stored token
-        /// </summary>
-        /// <param name="token">The account session token</param>
-        public static void SignIn(string token)
-        {
-            BrokerInstance.SignIn(token);
-        }
-
-        /// <summary>
-        /// Logs the user out of the brokerage account
-        /// </summary>
-        public static void SignOut()
-        {
-            BrokerInstance.SignOut();
-        }
-
-        /// <summary>
-        /// Returns the authentication token associated with the current user's session
-        /// </summary>
-        /// <returns>The authentication token</returns>
-        public static string GetAuthenticationToken()
-        {
-            return BrokerInstance.GetAuthenticationToken();
-        }
-
-        /// <summary>
-        /// Returns the name of the currently authenticated user
-        /// </summary>
-        /// <returns>The current username</returns>
-        public static string GetUsername()
-        {
-            return BrokerInstance.GetUsername();
-        }
+        public static BrokerInterface Instance;
         #endregion
 
         /// <summary>
@@ -119,7 +178,7 @@ namespace RobinhoodDesktop
         /// <param name="instance">The instance</param>
         public static void SetBroker(BrokerInterface instance)
         {
-            BrokerInstance = instance;
+            Instance = instance;
         }
     }
 }

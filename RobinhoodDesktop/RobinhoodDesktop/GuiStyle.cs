@@ -36,6 +36,11 @@ namespace RobinhoodDesktop
         public static readonly System.Drawing.Color BACKGROUND_COLOR = System.Drawing.Color.FromArgb(255, 17, 27, 32);
 
         /// <summary>
+        /// The color of a dark grey background
+        /// </summary>
+        public static readonly System.Drawing.Color DARK_GREY = System.Drawing.Color.FromArgb(255, 27, 27, 29);
+
+        /// <summary>
         /// The name of the font to use
         /// </summary>
         public const string FONT_NAME = "monospace";

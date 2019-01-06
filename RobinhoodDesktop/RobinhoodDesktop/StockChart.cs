@@ -12,7 +12,7 @@ namespace RobinhoodDesktop
 {
     public class StockChart : StockChartBasic
     {
-        public StockChart() 
+        public StockChart(string symbol) : base(symbol) 
         {
             // Set up the axes
             stockPricePlot.XAxis1.TicksCrossAxis = false;
@@ -250,19 +250,9 @@ namespace RobinhoodDesktop
 
 #region Variables
         /// <summary>
-        /// Callback function used to request data
-        /// </summary>
-        public DataAccessor.DataRequest DataRequest;
-
-        /// <summary>
         /// Callback function that is executed when the chart receives updated data
         /// </summary>
         public Action Updated;
-
-        /// <summary>
-        /// The symbol (or name) associated with the chart
-        /// </summary>
-        public string Symbol = "";
 
         /// <summary>
         /// The text item used to display the price
@@ -317,12 +307,10 @@ namespace RobinhoodDesktop
                 DateTime dataMin = (DateTime)Source.Rows[0][TIME_DATA_TAG];
                 DateTime dataMax = (DateTime)Source.Rows[Source.Rows.Count - 1][TIME_DATA_TAG];
                 DateTime desiredDataMin = chartMin.AddHours(-((dataMax - chartMin).TotalHours * 2));
-                if((dataMin.Date > desiredDataMin.Date) && (desiredDataMin < RequestedDateMin) && DataRequestMutex.WaitOne(0))
+                if((dataMin.Date > desiredDataMin.Date) && (desiredDataMin < RequestedDateMin))
                 {
-                    DataAccessor.PriceDataCallback callback = SetChartData;
-                    callback += (data) => { DataRequestMutex.Release(); };
                     RequestedDateMin = desiredDataMin;
-                    this.DataRequest(Symbol, desiredDataMin, dataMax, TimeSpan.FromMinutes(1), callback);
+                    RequestData(desiredDataMin, dataMax, TimeSpan.FromMinutes(1));
                 }
             }
         }

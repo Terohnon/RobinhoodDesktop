@@ -12,8 +12,9 @@ namespace RobinhoodDesktop
 {
     public class StockChartBasic
     {
-        public StockChartBasic()
+        public StockChartBasic(string symbol)
         {
+            this.Symbol = symbol;
             DataTable emptyTable = new DataTable();
             emptyTable.Columns.Add("Time", typeof(DateTime));
             emptyTable.Columns.Add("Price", typeof(float));
@@ -52,19 +53,95 @@ namespace RobinhoodDesktop
             stockPricePlot.YAxis1.HideTickText = true;
             stockPricePlot.YAxis1.Color = System.Drawing.Color.Transparent;
             stockPricePlot.PlotBackColor = GuiStyle.BACKGROUND_COLOR;
-            stockPricePlot.Canvas.HandleCreated += (sender, e) => { stockPricePlot.Canvas.BackColor = stockPricePlot.Canvas.Parent.BackColor; };
+            stockPricePlot.Canvas.HandleCreated += (sender, e) => 
+            {
+                stockPricePlot.Canvas.BackColor = stockPricePlot.Canvas.Parent.BackColor;
+                //SetChartData(Source);
+            };
 
             stockPricePlot.Refresh();
+        }
+
+        /// <summary>
+        /// Executed to request data
+        /// </summary>
+        /// <param name="start">The start time</param>
+        /// <param name="end">The end time</param>
+        /// <param name="interval">The requested interval between points in the returned data</param>
+        public virtual void RequestData(DateTime start, DateTime end, TimeSpan interval)
+        {
+            // Adding the last point tied to the current price actually modifies the cached data table.
+            // Remove it before requesting new data to ensure it doesn't show up as an already received point.
+            if((CurrentPriceRow != null) && ((CurrentPriceRow.RowState == DataRowState.Added) || (CurrentPriceRow.RowState == DataRowState.Modified)))
+            {
+                Source.Rows.Remove(CurrentPriceRow);
+            }
+
+            // Send the data request
+            if(string.IsNullOrEmpty(Symbol)) throw new Exception("Stock symbol not set");
+            DataAccessor.GetPriceHistory(Symbol, start, end, interval, SetChartData);
+        }
+
+        /// <summary>
+        /// Sets the chart to be updated by the specified subscription
+        /// </summary>
+        /// <param name="sub">The subscription to set</param>
+        public void SetSubscritpion(DataAccessor.Subscription sub)
+        {
+            this.PriceChangeNotifier = sub;
+
+            // Set the data source again to ensure that the final data point tied to the subscription is created
+            this.SetChartData(Source);
+
+            // Set the notification callback
+            this.PriceChangeNotifier.Notify += (DataAccessor.Subscription s) =>
+            {
+                if(CurrentPriceRow != null)
+                {
+                    CurrentPriceRow[TIME_DATA_TAG] = s.LastUpdated;
+                    CurrentPriceRow[PRICE_DATA_TAG] = s.Price;
+
+                    // Check if a new point needs to be added
+                    DateTime lastPoint = (DateTime)Source.Rows[Source.Rows.Count - 2][TIME_DATA_TAG];
+                    TimeSpan span = (lastPoint - (DateTime)Source.Rows[Source.Rows.Count - 3][TIME_DATA_TAG]);
+                    if(((DateTime)CurrentPriceRow[TIME_DATA_TAG] - lastPoint) >= span)
+                    {
+                        RequestData(lastPoint + span, lastPoint + span, span);
+                    }
+
+                    Canvas.BeginInvoke((Action)(() => { UpdateChartData(); }));
+                }
+            };
         }
 
         /// <summary>
         /// Sets the data for the chart to use
         /// </summary>
         /// <param name="data">A table of data which contains Time and Price columns</param>
-        public void SetChartData(DataTable data)
+        protected virtual void SetChartData(DataTable data)
         {
+            bool dataChanged = (data != Source);
             this.Source = data;
-            if((data != null) && Canvas.IsHandleCreated) Canvas.BeginInvoke((Action)(() => { UpdateChartData(); }));
+            if((data != null) && DataSourceMutex.WaitOne(10))
+            {
+                // Check if the current price row needs to be created
+                if((PriceChangeNotifier != null) && 
+                    (PriceChangeNotifier.LastUpdated != DateTime.MinValue) && 
+                    ((CurrentPriceRow == null) || (CurrentPriceRow.RowState == DataRowState.Detached) || dataChanged))
+                {
+                    // Create the current price table row
+                    CurrentPriceRow = Source.NewRow();
+                    CurrentPriceRow.ItemArray = Source.Rows[Source.Rows.Count - 1].ItemArray.Clone() as object[];
+                    CurrentPriceRow[TIME_DATA_TAG] = PriceChangeNotifier.LastUpdated;
+                    CurrentPriceRow[PRICE_DATA_TAG] = PriceChangeNotifier.Price;
+                    Source.Rows.Add(CurrentPriceRow);
+                }
+
+                if(Canvas.IsHandleCreated) Canvas.BeginInvoke((Action)(() => { UpdateChartData(); }));
+                else Canvas.HandleCreated += (sender, e) => { Canvas.BeginInvoke((Action)(() => { UpdateChartData(); })); };
+
+                DataSourceMutex.Release();
+            }
         }
 
 
@@ -127,6 +204,11 @@ namespace RobinhoodDesktop
 
         #region Variables
         /// <summary>
+        /// The symbol (or name) associated with the chart
+        /// </summary>
+        public string Symbol = "";
+
+        /// <summary>
         /// The source data that is being plotted
         /// </summary>
         public DataTable Source;
@@ -136,6 +218,11 @@ namespace RobinhoodDesktop
         /// (which is the previous closing price)
         /// </summary>
         public DataTable DailyData;
+
+        /// <summary>
+        /// A notification that can be received when the price changes
+        /// </summary>
+        public DataAccessor.Subscription PriceChangeNotifier;
 
         /// <summary>
         /// The amount of margin to apply between the maximum stock price and the top of the chart
@@ -161,6 +248,16 @@ namespace RobinhoodDesktop
         /// The line representing the reference price for each day
         /// </summary>
         protected NPlot.LinePlot openLine;
+
+        /// <summary>
+        /// A data row that is used to represent the current price on the stock chart
+        /// </summary>
+        protected DataRow CurrentPriceRow = null;
+
+        /// <summary>
+        /// Mutex used to syncrhonize access for setting the data source
+        /// </summary>
+        private System.Threading.Semaphore DataSourceMutex = new System.Threading.Semaphore(1, 1);
         #endregion
 
         #region Properties
@@ -234,11 +331,15 @@ namespace RobinhoodDesktop
             float max = 0;
             int startIdx = GetTimeIndex(start);
             int endIdx = GetTimeIndex(end);
-            for(int idx = startIdx; (idx >= 0) && (idx < endIdx); idx++)
+            if(DataSourceMutex.WaitOne(10))
             {
-                float price = (float)Source.Rows[idx][PRICE_DATA_TAG];
-                if(price < min) min = price;
-                if(price > max) max = price;
+                for(int idx = startIdx; (idx >= 0) && (idx < endIdx); idx++)
+                {
+                    float price = (float)Source.Rows[idx][PRICE_DATA_TAG];
+                    if(price < min) min = price;
+                    if(price > max) max = price;
+                }
+                DataSourceMutex.Release();
             }
 
 

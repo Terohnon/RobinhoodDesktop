@@ -113,9 +113,9 @@ namespace RobinhoodDesktop
         /// <param name="e"></param>
         private void LogInButton_MouseUp(object sender, EventArgs e)
         {
-            Broker.SignIn(Username.Text, Password.Text);
+            Broker.Instance.SignIn(Username.Text, Password.Text);
             Password.Text = "";
-            if(!Broker.IsSignedIn())
+            if(!Broker.Instance.IsSignedIn())
             {
                 ErrorText = "Error: Invalid username or password";
                 GuiBox.Refresh();

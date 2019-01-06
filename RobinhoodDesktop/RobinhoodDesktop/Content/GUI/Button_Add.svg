@@ -24,9 +24,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.35"
-     inkscape:cx="566.2261"
-     inkscape:cy="134.1335"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="528.42819"
+     inkscape:cy="6.2229364"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -146,5 +146,25 @@
        inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\button.png"
        inkscape:export-xdpi="8.4507046"
        inkscape:export-ydpi="8.4507046" />
+    <rect
+       style="fill:#ffffff;stroke:#00ad91;stroke-width:15;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;fill-opacity:1"
+       id="rect2991-1"
+       width="646.49762"
+       height="197.9899"
+       x="382.46548"
+       y="344.79581"
+       ry="40.406101"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_White.png"
+       inkscape:export-xdpi="8.4507046"
+       inkscape:export-ydpi="8.4507046" />
+    <path
+       style="fill:#00ad91;fill-opacity:1;stroke:#00ad91;stroke-width:8.29248428;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 612.90265,848.44988 17.28481,13.22774 -44.90256,58.86128 129.32796,0 0,29.06122 -129.32796,0 44.90256,52.78638 -17.28481,18.1484 -69.19682,-85.7328 z"
+       id="path3003-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccccc"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\back.png"
+       inkscape:export-xdpi="9.7577505"
+       inkscape:export-ydpi="9.7577505" />
   </g>
 </svg>
