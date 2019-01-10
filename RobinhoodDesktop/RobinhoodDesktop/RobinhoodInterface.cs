@@ -441,7 +441,7 @@ namespace RobinhoodDesktop
         /// <returns>The authentication token</returns>
         public string GetAuthenticationToken()
         {
-            return Client.AuthToken;
+            return Client.RefreshToken;
         }
 
         /// <summary>

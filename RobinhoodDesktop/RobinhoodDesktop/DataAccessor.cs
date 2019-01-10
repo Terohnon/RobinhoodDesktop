@@ -252,7 +252,7 @@ namespace RobinhoodDesktop
         /// </summary>
         public static void Close()
         {
-            SubscriptionTimer.Stop();
+            if(SubscriptionTimer != null) SubscriptionTimer.Stop();
         }
 
         /// <summary>

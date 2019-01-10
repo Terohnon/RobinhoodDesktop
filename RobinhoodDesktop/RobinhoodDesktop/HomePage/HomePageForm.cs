@@ -79,13 +79,13 @@ namespace RobinhoodDesktop.HomePage
                 l.Font = new Font(GuiStyle.Font.Name, 12, FontStyle.Bold);
                 l.TextAlign = ContentAlignment.TopCenter;
             }
-            Timer t = new Timer();
-            t.Tick += (sender, e) =>
+            UiUpdateTick = new Timer();
+            UiUpdateTick.Tick += (sender, e) =>
             {
                 AccountSummaryPanel.Visible = AccountSummaryPanel.Bounds.Contains(PointToClient(MousePosition));
             };
-            t.Interval = 50;
-            t.Start();
+            UiUpdateTick.Interval = 50;
+            UiUpdateTick.Start();
 
             // Create the labels to show the account value and daily change
             CashLabel = new Label();
@@ -158,10 +158,9 @@ namespace RobinhoodDesktop.HomePage
             SearchHome.AddStockUi += CreateStockChart;
             Controls.Add(SearchHome);
 
-            // Add test stock symbols to the list
+            // Create the list of stocks being examined
             StockListHome = new StockList();
             StockListHome.Location = new Point(SearchHome.Location.X, SearchHome.Location.Y + 100);
-            StockListHome.AutoScroll = true;
             StockListHome.Size = new Size(300, 300);
             StockListHome.AddStockUi += CreateStockChart;
             Controls.Add(StockListHome);
@@ -170,9 +169,8 @@ namespace RobinhoodDesktop.HomePage
             Menu = new MenuBar();
             Menu.ToggleButton.Location = new Point(20, 20);
             Menu.LogIn.RememberLogIn.Checked = Config.RememberLogin;
+            Menu.LogIn.LogInButton.MouseUp += (sender, e) => { HomePageForm_AccountUpdate(); };
             Controls.Add(Menu.ToggleButton);
-
-            
 
             // Set up the resize handler
             this.ResizeEnd += HomePageForm_ResizeEnd;
@@ -198,13 +196,6 @@ namespace RobinhoodDesktop.HomePage
                 }
                 HomePageForm_AccountUpdate();
             };
-
-            StockListHome.Add(StockList.ORDERS, "AMD", new StockList.OrderSummary(new Broker.Order()
-            {
-                Symbol = "AMD",
-                BuySell = Broker.Order.BuySellType.BUY,
-                Quantity = 2
-            }));
         }
 
         #region Variables
@@ -222,6 +213,7 @@ namespace RobinhoodDesktop.HomePage
         public Label SummaryBuyingPowerLabel;
         private BuySellPanel BuySell;
         private CustomControls.CustomScrollbar UiScrollBar;
+        private Timer UiUpdateTick;
         #endregion
 
         private void CreateStockChart(string symbol)
@@ -272,7 +264,7 @@ namespace RobinhoodDesktop.HomePage
 
         private void UIList_Pack(object sender, System.EventArgs e)
         {
-            for(int times = 1; times > 0; times--)
+            for(int times = 1; (UIList.Controls.Count > 0) && (times > 0); times--)
             {
                 int y = -UiScrollBar.Value;
                 foreach(Control c in UIList.Controls)
@@ -326,13 +318,19 @@ namespace RobinhoodDesktop.HomePage
 
         private void HomePageForm_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            UiUpdateTick.Stop();
+            while(UiUpdateTick.Enabled) ;
             Robinhood.Close();
             DataAccessor.Close();
 
             Config.LocalWatchlist.Clear();
-            foreach(var stock in StockListHome.Stocks[StockList.WATCHLIST])
+            List<StockList.StockLine> watchlist;
+            if(StockListHome.Stocks.TryGetValue(StockList.WATCHLIST, out watchlist))
             {
-                Config.LocalWatchlist.Add(stock.Symbol);
+                foreach(var stock in watchlist)
+                {
+                    Config.LocalWatchlist.Add(stock.Symbol);
+                }
             }
             Config.StockCharts.Clear();
             foreach(var chart in StockUIs)
