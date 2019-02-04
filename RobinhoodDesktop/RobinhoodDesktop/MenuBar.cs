@@ -39,6 +39,7 @@ namespace RobinhoodDesktop
             };
 
             MenuPanel.Controls.Add(new LogInButton(this));
+            MenuPanel.Controls.Add(new ScriptButton(this));
             PackMenu();
         }
         #region Types
@@ -168,6 +169,24 @@ namespace RobinhoodDesktop
                         menu.MenuPanel.Parent.Controls.Remove(menu.LogIn.Background);
                         menu.Hide();
                     }
+                };
+            }
+        }
+        #endregion
+
+        #region Script
+        public class ScriptButton : MenuButton
+        {
+            public ScriptButton(MenuBar menu) : base(menu, "Content/GUI/Button_Add.png")
+            {
+                menu.OnShow += () =>
+                {
+                    this.ButtonText = "Script";
+                };
+
+                this.MouseUp += (sender, e) =>
+                {
+                    new Script.StockSession().Run();
                 };
             }
         }

@@ -379,19 +379,24 @@ namespace RobinhoodDesktop
         {
             Client.DownloadQuote(symbol).ContinueWith((results) =>
             {
-                // Put the data into a table
-                var response = results.Result;
-                DataAccessor.StockInfo info = new DataAccessor.StockInfo()
+                if(results.IsCompleted && !results.IsFaulted)
                 {
-                    Ask = response.AskPrice,
-                    AskVolume = response.AskSize,
-                    Bid = response.BidPrice,
-                    BidVolume = response.BidSize,
-                    PreviousClose = response.AdjustedPreviousClose
-                };
+                    // Put the data into a table
+                    var response = results.Result;
+                    DataAccessor.StockInfo info = new DataAccessor.StockInfo()
+                    {
+                        Ask = response.AskPrice,
+                        AskVolume = response.AskSize,
+                        Bid = response.BidPrice,
+                        BidVolume = response.BidSize,
+                        PreviousClose = response.AdjustedPreviousClose
+                    };
 
-                // Send the results back
-                callback(info);
+
+                    // Send the results back
+                    callback(info);
+                }
+                else callback(new DataAccessor.StockInfo());
             });
         }
         #endregion
@@ -632,7 +637,8 @@ namespace RobinhoodDesktop
             while(Running)
             {
                 // Process the history requests
-                if((HistoryRequests.Count > 0) &&
+                if(Client.isAuthenticated &&
+                    (HistoryRequests.Count > 0) &&
                     ((DateTime.Now - HistoryRequests[0].RequestTime).TotalSeconds) > HISTORY_REQUEST_PROCESS_DELAY)
                 {
                     while(HistoryRequests.Count > 0)
@@ -666,7 +672,9 @@ namespace RobinhoodDesktop
                         else
                         {
                             var bounds = ((start.Date == end.Date) ? HISTORY_BOUNDS.EXTENDED : HISTORY_BOUNDS.REGULAR); // Can only get extended hours history for the current day
-                            var history = Client.DownloadHistory(symbols, HISTORY_INTERVALS[interval], HISTORY_SPANS[getHistoryTimeSpan(start, end)], bounds).Result;
+                            var request = Client.DownloadHistory(symbols, HISTORY_INTERVALS[interval], HISTORY_SPANS[getHistoryTimeSpan(start, end)], bounds);
+                            if(!request.IsCompleted || request.IsFaulted) continue;
+                            var history = request.Result;
 
                             // Return the data to the reqesting sources
                             int servicedCount = 0;
@@ -732,7 +740,7 @@ namespace RobinhoodDesktop
                 response.ContinueWith((result) =>
                 {
                     ActiveOrderMutex.WaitOne();
-                    if(result.IsCompleted && !result.IsFaulted)
+                    if((result.Status != System.Threading.Tasks.TaskStatus.Canceled) && result.IsCompleted && !result.IsFaulted)
                     {
                         foreach(OrderSnapshot s in result.Result)
                         {

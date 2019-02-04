@@ -286,7 +286,7 @@ namespace RobinhoodDesktop
         private void UpdatePriceText(DateTime time)
         {
             int idx = GetTimeIndex(time);
-            if(idx >= 0)
+            if((idx >= 0) && (DailyData != null))
             {
                 float price = (float)Source.Rows[idx]["Price"];
                 priceText.Text = String.Format("{0:c}", price);
@@ -301,7 +301,7 @@ namespace RobinhoodDesktop
         /// </summary>
         private void RefreshSourceData()
         {
-            if(Source != null)
+            if((Source != null) && ((long)stockPricePlot.XAxis1.WorldMin != 0))
             {
                 DateTime chartMin = new DateTime((long)stockPricePlot.XAxis1.WorldMin);
                 DateTime dataMin = (DateTime)Source.Rows[0][TIME_DATA_TAG];
