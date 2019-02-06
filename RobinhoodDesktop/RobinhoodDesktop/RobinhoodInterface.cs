@@ -134,7 +134,7 @@ namespace RobinhoodDesktop
             {
                 string symbol = "No instrument";
                 instrument = instrument.TrimEnd(new char[] { '/' });
-                string instrumentId = instrument.Substring(instrument.LastIndexOf("/"));
+                string instrumentId = instrument.Substring(instrument.LastIndexOf("/") + 1);
                 if(!InstrumentCache.TryGetValue(instrumentId, out symbol))
                 {
                     associateInstruments(source);
@@ -641,7 +641,7 @@ namespace RobinhoodDesktop
                     (HistoryRequests.Count > 0) &&
                     ((DateTime.Now - HistoryRequests[0].RequestTime).TotalSeconds) > HISTORY_REQUEST_PROCESS_DELAY)
                 {
-                    while(HistoryRequests.Count > 0)
+                    while((HistoryRequests.Count > 0) && Running)
                     {
                         // Put together a single request
                         HistoryMutex.WaitOne();
@@ -673,6 +673,7 @@ namespace RobinhoodDesktop
                         {
                             var bounds = ((start.Date == end.Date) ? HISTORY_BOUNDS.EXTENDED : HISTORY_BOUNDS.REGULAR); // Can only get extended hours history for the current day
                             var request = Client.DownloadHistory(symbols, HISTORY_INTERVALS[interval], HISTORY_SPANS[getHistoryTimeSpan(start, end)], bounds);
+                            request.Wait();
                             if(!request.IsCompleted || request.IsFaulted) continue;
                             var history = request.Result;
 

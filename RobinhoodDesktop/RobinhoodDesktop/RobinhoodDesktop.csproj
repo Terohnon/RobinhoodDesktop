@@ -97,7 +97,8 @@
       <HintPath>..\packages\NetSerializer.4.1.0\lib\net45\NetSerializer.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NPlot">
+    <Reference Include="NPlot, Version=0.9.10.1, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>NPlot\NPlot.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
