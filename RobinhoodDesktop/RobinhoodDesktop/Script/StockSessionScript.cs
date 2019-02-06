@@ -22,7 +22,10 @@ namespace RobinhoodDesktop.Script
             // Load the first set of data
             foreach(var pair in sinkData)
             {
-                pair.Value[0].Load();
+                foreach(var set in pair.Value)
+                {
+                    set.Load();
+                }
             }
         }
     }
