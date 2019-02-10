@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RobinhoodDesktop.Script
 {
-    public class StockDataSetDerived<T, U> : StockDataSet<T> where T : StockData, new() where U : StockData 
+    public class StockDataSetDerived<T, U> : StockDataSet<T> where T : struct, StockData where U : struct, StockData 
     {
         public StockDataSetDerived(StockDataSet<U> source, StockDataFile file)
         {
@@ -14,8 +14,6 @@ namespace RobinhoodDesktop.Script
             this.File = file;
             this.Start = source.Start;
             this.Symbol = source.Symbol;
-
-            DataSet = new List<T>(SourceData.DataSet.Count);
         }
 
         protected StockDataSetDerived()
@@ -66,6 +64,7 @@ namespace RobinhoodDesktop.Script
             if(!IsReady())
             {
                 SourceData.Load();
+                DataSet.Initialize(SourceData.DataSet.Count);
                 for(int idx = 0; idx < SourceData.DataSet.Count; idx++)
                 {
                     var datum = new T();

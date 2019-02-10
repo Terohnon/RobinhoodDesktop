@@ -18,13 +18,13 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="data">The available source data</param>
         /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
-        partial void MovingAverage_Update(List<StockDataSource> data, int updateIndex)
+        partial void MovingAverage_Update(StockDataSet<StockDataSource>.StockDataArray data, int updateIndex)
         {
             this.Average10Min = 0.0f;
             int startIdx = Math.Max(0, updateIndex - 9);
             for(int idx = startIdx; idx <= updateIndex; idx++)
             {
-                this.Average10Min += data[idx].Price;
+                this.Average10Min += data.InternalArray[idx].Price;
             }
             this.Average10Min /= ((updateIndex + 1) - startIdx);
         }

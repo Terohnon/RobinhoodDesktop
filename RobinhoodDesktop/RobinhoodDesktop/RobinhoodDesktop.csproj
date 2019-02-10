@@ -178,6 +178,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <EmbeddedResource Include="Script\StockDataScript.cs" />
+    <Compile Include="Script\StockDataBase.cs" />
     <Compile Include="Script\StockDataSetDerived.cs" />
     <Compile Include="Script\StockSession.cs" />
     <EmbeddedResource Include="Script\StockSessionScript.cs" />

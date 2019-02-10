@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace RobinhoodDesktop.Script
 {
@@ -12,6 +13,7 @@ namespace RobinhoodDesktop.Script
     }
 
     [Serializable]
+    [StructLayout(LayoutKind.Sequential)]
     public partial struct StockDataScript : StockData
     {
         #region Script Interface
@@ -24,18 +26,6 @@ namespace RobinhoodDesktop.Script
             var data = new StockDataScript();
             data.Price = price;
             return data;
-        }
-
-        /// <summary>
-        /// Creates a new instance of a stock data point from only a price
-        /// <param name="data">The available source data</param>
-        /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
-        /// </summary>
-        public static StockDataScript Create(List<StockDataSource> data, int updateIndex)
-        {
-            var newPoint = new StockDataScript();
-            newPoint.Update(data, updateIndex);
-            return newPoint;
         }
         #endregion
 
@@ -55,12 +45,12 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="dataSource">The available source data</param>
         /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
-        public void Update<T>(List<T> dataSource, int updateIndex) where T : StockData
+        public void Update<T>(StockDataSet<T>.StockDataArray dataSource, int updateIndex) where T : struct, StockData
         {
-            var data = dataSource as List<StockDataSource>;
+            var data = dataSource as StockDataSet<StockDataSource>.StockDataArray;
             if(data != null)
             {
-                this.Price = data[updateIndex].Price;
+                this.Price = data.InternalArray[updateIndex].Price;
 
                 ///= PartialUpdates ///
             }

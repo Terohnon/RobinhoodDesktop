@@ -54,6 +54,7 @@ namespace RobinhoodDesktop.Script
                 using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SourceFile.GetSourceCode(SOURCE_CLASS));
 
                 // Create the sink file
+                //SinkFile = new StockDataFile(new List<string>() { }, new List<string>() {  });
                 SinkFile = new StockDataFile(new List<string>() { "MovingAverage" }, new List<string>() { File.ReadAllText(@"Script/MovingAverage.cs") });
                 script.Add("tmp/" + SINK_CLASS + ".cs");
                 using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SinkFile.GetSourceCode(SINK_CLASS));
@@ -69,9 +70,25 @@ namespace RobinhoodDesktop.Script
 #else
                 var isDebug = false;
 #endif
+#if true
                 var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
                 var run = scriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockSessionScript.Run", this);
                 run(this);
+#else
+                // Set up the derived data sink
+                var sourceData = SourceFile.GetSegments<StockDataBase>();
+                var sinkData = StockDataSetDerived<StockDataBase, StockDataBase>.Derive(sourceData, SinkFile);
+                SinkFile.SetSegments(sinkData);
+
+                // Load the first set of data
+                foreach(var pair in sinkData)
+                {
+                    foreach(var set in pair.Value)
+                    {
+                        set.Load();
+                    }
+                }
+#endif
 
                 // Cleanup
                 SourceFile.File.Close();

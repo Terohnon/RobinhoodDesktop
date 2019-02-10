@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 using CSScriptLibrary;
 using NetSerializer;
@@ -84,7 +85,7 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <typeparam name="T">The type of the data points in the segments</typeparam>
         /// <returns>The data segments</returns>
-        public Dictionary<string, List<StockDataSet<T>>> GetSegments<T>() where T : StockData
+        public Dictionary<string, List<StockDataSet<T>>> GetSegments<T>() where T : struct, StockData
         {
             /*
             var loader = CSScript.LoadCode(SourceCode).GetStaticMethod(".Load");
@@ -114,7 +115,7 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="segment"></param>
-        public void SetSegments<T>(Dictionary<string, List<StockDataSet<T>>> segments) where T : StockData
+        public void SetSegments<T>(Dictionary<string, List<StockDataSet<T>>> segments) where T : struct, StockData
         {
             this.Start = DateTime.MaxValue;
             this.End = DateTime.MinValue;
@@ -137,16 +138,16 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <typeparam name="T">The data point type</typeparam>
         /// <param name="segment">The segment to populate</param>
-        public void LoadSegment<T>(StockDataSet<T> segment) where T : StockData
+        public void LoadSegment<T>(StockDataSet<T> segment) where T : struct, StockData
         {
-            var des = new Serializer(new List<Type>() { typeof(T), typeof(int) });
+            var des = new Serializer(new List<Type>() { typeof(T).MakeArrayType() });
             foreach(Tuple<DateTime, long> t in this.Segments[segment.Symbol])
             {
                 if(t.Item1 == segment.Start)
                 {
                     File.Seek(t.Item2, SeekOrigin.Begin);
-                    int count = (int)des.Deserialize(File);
-                    for(int i = 0; i < count; i++) segment.DataSet.Add((T)des.Deserialize(File));
+                    //segment.DataSet.Initialize((T[])des.Deserialize(File));
+                    segment.DataSet.Initialize(Load<T>(File));
                     break;
                 }
             }
@@ -156,10 +157,10 @@ namespace RobinhoodDesktop.Script
         /// Save this instance to the stream
         /// </summary>
         /// <param name="s">The stream to save this to</param>
-        public void Save<T>(Stream s, Type dataType, Dictionary<string, List<StockDataSet<T>>> segments) where T : StockData
+        public void Save<T>(Stream s, Type dataType, Dictionary<string, List<StockDataSet<T>>> segments) where T : struct, StockData
         {
             var headerSer = new Serializer(new List<Type>() { typeof(StockDataFile) });
-            var dataSer = new Serializer(new List<Type>() { dataType, typeof(int) });
+            var dataSer = new Serializer(new List<Type>() { dataType.MakeArrayType() });
             this.File = s;
 
 
@@ -178,8 +179,17 @@ namespace RobinhoodDesktop.Script
                         {
                             allSegments[matchingIdx] = new Tuple<DateTime, long>(set.Start, s.Position);
                             set.StreamAddress = s.Position;
-                            dataSer.Serialize(s, set.DataSet.Count);
-                            foreach(var p in set.DataSet) dataSer.Serialize(s, p);
+                            if(typeof(T) == dataType)
+                            {
+                                //dataSer.Serialize(s, set.DataSet.InternalArray);
+                                Store(s, set.DataSet.InternalArray, set.DataSet.Count);
+                            }
+                            else
+                            {
+                                var data_points = Array.CreateInstance(dataType, set.DataSet.Count);
+                                for(int pntIdx = 0; pntIdx < set.DataSet.Count; pntIdx++) data_points.SetValue(set.DataSet.InternalArray[pntIdx], pntIdx);
+                                dataSer.Serialize(s, data_points);
+                            }
                             matchingIdx++;
                             break;
                         }
@@ -242,7 +252,7 @@ namespace RobinhoodDesktop.Script
                 string updates = "";
                 foreach(string name in this.Fields)
                 {
-                    prototypes += "partial void " + name + "_Update(List<StockDataSource> data, int updateIndex);\n";
+                    prototypes += "partial void " + name + "_Update(StockDataSet<StockDataSource>.StockDataArray data, int updateIndex);\n";
                     updates += name + "_Update(data, updateIndex);\n";
                 }
                 code = code.Replace("///= PartialPrototypes ///", prototypes.Replace("\n", "\n        "));
@@ -286,13 +296,11 @@ namespace RobinhoodDesktop.Script
         {
             StockDataFile newFile = new StockDataFile();
             newFile.Interval = new TimeSpan(0, 1, 0);
-            Dictionary<string, List<StockDataSet<StockData>>> segments = new Dictionary<string, List<StockDataSet<StockData>>>();
+            Dictionary<string, List<StockDataSet<StockDataBase>>> segments = new Dictionary<string, List<StockDataSet<StockDataBase>>>();
             string src = newFile.GetSourceCode("StockDataSource");
             var scriptInstance = CSScript.LoadCode(src);
             var stockDataType = scriptInstance.GetType("RobinhoodDesktop.Script.StockDataSource");
             var creator = scriptInstance.GetStaticMethod("*.CreateFromPrice", 0.0f);
-
-            var listType = typeof(List<>).MakeGenericType(typeof(StockDataSet<>).MakeGenericType(stockDataType));
 
             foreach(string filename in sourceFiles)
             {
@@ -307,24 +315,24 @@ namespace RobinhoodDesktop.Script
 
                 // Read the initial line of the file to learn which stocks are in the file
                 StreamReader s = new StreamReader(filename);
-                List<StockDataSet<StockData>> fileData = new List<StockDataSet<StockData>>();
+                List<StockDataSet<StockDataBase>> fileData = new List<StockDataSet<StockDataBase>>();
                 string line = s.ReadLine();
                 string[] stockNamesStr = line.Split(new char[] { ',' });
                 for(int i = 1; i < stockNamesStr.Length; i++)
                 {
                     string symbol = stockNamesStr[i].ToUpper();
-                    List<StockDataSet<StockData>> sets;
+                    List<StockDataSet<StockDataBase>> sets;
 
                     // Check if a stock data set already exists for the symbol
                     if(!segments.TryGetValue(symbol, out sets))
                     {
-                        sets = new List<StockDataSet<StockData>>();
+                        sets = new List<StockDataSet<StockDataBase>>();
                         segments.Add(symbol, sets);
                     }
-                    foreach(StockDataSet<StockData> preExistingSet in sets)
+                    foreach(StockDataSet<StockDataBase> preExistingSet in sets)
                     {
-                        // Add to an existing set if they are for the same month
-                        if(preExistingSet.Start.Month == fileStart.Month)
+                        // Add to an existing set if they are for the same day
+                        if(preExistingSet.Start.Date == fileStart.Date)
                         {
                             fileData.Add(preExistingSet);
                             break;
@@ -333,7 +341,8 @@ namespace RobinhoodDesktop.Script
                     if(fileData.Count <= (i - 1))
                     {
                         // No matching set was found, so create a new one
-                        StockDataSet<StockData> newSet = new StockDataSet<StockData>(symbol, fileStart, newFile);
+                        StockDataSet<StockDataBase> newSet = new StockDataSet<StockDataBase>(symbol, fileStart, newFile);
+                        newSet.DataSet.Initialize(391);
                         fileData.Add(newSet);
                         sets.Add(newSet);
                     }
@@ -366,8 +375,7 @@ namespace RobinhoodDesktop.Script
                             {
                                 while(fileData[i].End <= newTime)
                                 {
-                                    StockData point = (StockData)creator(price);
-                                    fileData[i].DataSet.Add(point);
+                                    fileData[i].DataSet.Add(new StockDataBase(price));
                                 }
                             }
                         }
@@ -377,9 +385,55 @@ namespace RobinhoodDesktop.Script
 
             // Save the old file to disk
             newFile.SetSegments(segments);
-            newFile.Save(destination, stockDataType, segments);
+            newFile.Save(destination, typeof(StockDataBase), segments);
 
             return newFile;
+        }
+        #endregion
+
+        #region Private Utilities
+        /// <summary>
+        /// Stores the stock data array to the stream
+        /// </summary>
+        /// <typeparam name="T">The stock data point type</typeparam>
+        /// <param name="s">The stream to store the data to</param>
+        /// <param name="val">The array to store</param>
+        /// <param name="count">The number of elements to store</param>
+        private static void Store<T>(Stream s, T[] val, int count) where T : struct
+        {
+            int structSize = Marshal.SizeOf(val[0]);
+            byte[] data = new byte[structSize * count];
+            IntPtr ptr = Marshal.AllocHGlobal(structSize * count);
+
+            for(int i = 0; i < val.Length; i++) Marshal.StructureToPtr(val[i], ptr + (i * structSize), true);
+            //Marshal.StructureToPtr(val, ptr, true);
+            Marshal.Copy(ptr, data, 0, data.Length);
+            s.WriteByte((byte)(count >> 8));
+            s.WriteByte((byte)(count & 0xFF));
+            s.Write(data, 0, data.Length);
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        /// <summary>
+        /// Loads an array of stock data from the specified stream
+        /// </summary>
+        /// <typeparam name="T">The stock data type</typeparam>
+        /// <param name="s">The stream to load from</param>
+        /// <returns>The retrieved array of stock data</returns>
+        private static T[] Load<T>(Stream s) where T : struct
+        {
+            int count = (s.ReadByte() << 8) | s.ReadByte();
+            T[] structs = new T[count];
+            int structSize = Marshal.SizeOf(structs[0]);
+            int size = structSize * count;
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            byte[] data = new byte[size];
+            s.Read(data, 0, size);
+            Marshal.Copy(data, 0, ptr, size);
+            for(int i = 0; i < count; i++) structs[i] = Marshal.PtrToStructure<T>(ptr + (i * structSize));
+            Marshal.FreeHGlobal(ptr);
+
+            return structs;
         }
         #endregion
     }

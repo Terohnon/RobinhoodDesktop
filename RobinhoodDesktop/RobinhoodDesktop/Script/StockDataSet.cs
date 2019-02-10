@@ -7,7 +7,7 @@ using System.IO;
 
 namespace RobinhoodDesktop.Script
 {
-    public class StockDataSet<T> where T : StockData
+    public class StockDataSet<T> where T : struct, StockData
     {
         public StockDataSet(string symbol, DateTime start, StockDataFile file, long address = -1)
         {
@@ -15,13 +15,57 @@ namespace RobinhoodDesktop.Script
             this.Start = start;
             this.File = file;
             this.StreamAddress = address;
-            this.DataSet = new List<T>();
         }
 
         protected StockDataSet()
         {
 
         }
+
+        #region Types
+        public class StockDataArray
+        {
+            T[] m_array;
+            int m_count;
+
+            public StockDataArray()
+            {
+                m_count = 0;
+            }
+
+            public T[] InternalArray { get { return m_array; } }
+
+            public int Count { get { return m_count; } }
+
+            public void Initialize(int capacity)
+            {
+                m_array = new T[capacity];
+                m_count = 0;
+            }
+
+            public void Initialize(T[] data)
+            {
+                m_array = data;
+                m_count = data.Length;
+            }
+
+            public void Add(T element)
+            {
+                if(m_count == m_array.Length)
+                {
+                    Array.Resize(ref m_array, m_array.Length * 2);
+                }
+
+                m_array[m_count++] = element;
+            }
+
+            public void Clear()
+            {
+                m_array = null;
+                m_count = 0;
+            }
+        }
+        #endregion
 
         #region Variables
         public string Symbol;
@@ -30,13 +74,13 @@ namespace RobinhoodDesktop.Script
         public long StreamAddress;
         public DateTime End
         {
-            get { return (DataSet != null) ? Start.AddTicks(Interval.Ticks * DataSet.Count) : Start; }
+            get { return Start.AddTicks(Interval.Ticks * DataSet.Count); }
         }
         public TimeSpan Interval
         {
             get { return File.Interval; }
         }
-        public List<T> DataSet;
+        public readonly StockDataArray DataSet = new StockDataArray();
         #endregion
 
         /// <summary>
@@ -45,7 +89,7 @@ namespace RobinhoodDesktop.Script
         /// <returns>True if data is available</returns>
         public virtual bool IsReady()
         {
-            return (DataSet != null) && (DataSet.Count > 0);
+            return (DataSet.Count > 0);
         }
 
         /// <summary>
