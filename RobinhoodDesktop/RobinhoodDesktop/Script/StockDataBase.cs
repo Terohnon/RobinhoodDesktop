@@ -36,5 +36,15 @@ namespace RobinhoodDesktop.Script
                 this.Price = data.InternalArray[updateIndex].Price;
             }
         }
+
+        /// <summary>
+        /// The main update function which sets all of the member variables based on other source data
+        /// </summary>
+        /// <param name="data">The available source data</param>
+        /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
+        public void Update(StockDataSet<StockDataBase>.StockDataArray data, int updateIndex)
+        {
+            this.Price = data.InternalArray[updateIndex].Price;
+        }
     }
 }

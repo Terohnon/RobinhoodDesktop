@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using Microsoft.CSharp;
 
 namespace RobinhoodDesktop.Script
 {
@@ -43,17 +44,13 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// The main update function which sets all of the member variables based on other source data
         /// </summary>
-        /// <param name="dataSource">The available source data</param>
+        /// <param name="data">The available source data</param>
         /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
-        public void Update<T>(StockDataSet<T>.StockDataArray dataSource, int updateIndex) where T : struct, StockData
+        public void Update(StockDataSet<StockDataSource>.StockDataArray data, int updateIndex)
         {
-            var data = dataSource as StockDataSet<StockDataSource>.StockDataArray;
-            if(data != null)
-            {
-                this.Price = data.InternalArray[updateIndex].Price;
+            this.Price = data.InternalArray[updateIndex].Price;
 
-                ///= PartialUpdates ///
-            }
+            ///= PartialUpdates ///
         }
     }
 }

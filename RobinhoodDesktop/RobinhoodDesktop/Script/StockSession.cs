@@ -77,7 +77,12 @@ namespace RobinhoodDesktop.Script
 #else
                 // Set up the derived data sink
                 var sourceData = SourceFile.GetSegments<StockDataBase>();
-                var sinkData = StockDataSetDerived<StockDataBase, StockDataBase>.Derive(sourceData, SinkFile);
+                var sinkData = StockDataSetDerived<StockDataBase, StockDataBase>.Derive(sourceData, SinkFile, (data, idx) =>
+                {
+                    var point = new StockDataBase();
+                    point.Update(data, idx);
+                    return point;
+                });
                 SinkFile.SetSegments(sinkData);
 
                 // Load the first set of data
