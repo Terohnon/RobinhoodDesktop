@@ -297,10 +297,6 @@ namespace RobinhoodDesktop.Script
             StockDataFile newFile = new StockDataFile();
             newFile.Interval = new TimeSpan(0, 1, 0);
             Dictionary<string, List<StockDataSet<StockDataBase>>> segments = new Dictionary<string, List<StockDataSet<StockDataBase>>>();
-            string src = newFile.GetSourceCode("StockDataSource");
-            var scriptInstance = CSScript.LoadCode(src);
-            var stockDataType = scriptInstance.GetType("RobinhoodDesktop.Script.StockDataSource");
-            var creator = scriptInstance.GetStaticMethod("*.CreateFromPrice", 0.0f);
 
             foreach(string filename in sourceFiles)
             {
@@ -404,14 +400,13 @@ namespace RobinhoodDesktop.Script
             int structSize = Marshal.SizeOf(val[0]);
             byte[] data = new byte[structSize * count];
             IntPtr ptr = Marshal.AllocHGlobal(structSize * count);
-
-            for(int i = 0; i < val.Length; i++) Marshal.StructureToPtr(val[i], ptr + (i * structSize), true);
-            //Marshal.StructureToPtr(val, ptr, true);
+            for(int i = 0; i < count; i++) Marshal.StructureToPtr(val[i], ptr + (i * structSize), true);
             Marshal.Copy(ptr, data, 0, data.Length);
+            Marshal.FreeHGlobal(ptr);
+
             s.WriteByte((byte)(count >> 8));
             s.WriteByte((byte)(count & 0xFF));
             s.Write(data, 0, data.Length);
-            Marshal.FreeHGlobal(ptr);
         }
 
         /// <summary>
