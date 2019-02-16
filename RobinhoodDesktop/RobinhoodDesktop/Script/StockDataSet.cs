@@ -37,16 +37,22 @@ namespace RobinhoodDesktop.Script
 
             public int Count { get { return m_count; } }
 
-            public void Initialize(int capacity)
-            {
-                m_array = new T[capacity];
-                m_count = 0;
-            }
-
             public void Initialize(T[] data)
             {
                 m_array = data;
                 m_count = data.Length;
+            }
+
+            public void Resize(int capacity)
+            {
+                if(m_array == null)
+                {
+                    m_array = new T[capacity];
+                }
+                else if(m_array.Length != capacity)
+                {
+                    Array.Resize(ref m_array, capacity);
+                }
             }
 
             public void Add(T element)

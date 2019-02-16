@@ -338,7 +338,7 @@ namespace RobinhoodDesktop.Script
                     {
                         // No matching set was found, so create a new one
                         StockDataSet<StockDataBase> newSet = new StockDataSet<StockDataBase>(symbol, fileStart, newFile);
-                        newSet.DataSet.Initialize(391);
+                        newSet.DataSet.Resize(391);
                         fileData.Add(newSet);
                         sets.Add(newSet);
                     }

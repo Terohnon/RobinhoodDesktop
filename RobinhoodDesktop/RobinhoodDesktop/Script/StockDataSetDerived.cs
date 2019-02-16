@@ -70,14 +70,50 @@ namespace RobinhoodDesktop.Script
             if(!IsReady())
             {
                 SourceData.Load();
-                DataSet.Initialize(SourceData.DataSet.Count);
-                for(int idx = 0; idx < SourceData.DataSet.Count; idx++)
+                DataSet.Resize(SourceData.DataSet.Count);
+                for(int idx = DataSet.Count; idx < SourceData.DataSet.Count; idx++)
                 {
-                    var datum = new T();
-                    Create(SourceData.DataSet, idx);
+                    var datum = Create(SourceData.DataSet, idx);
                     DataSet.Add(datum);
                 }
             }
+        }
+
+        /// <summary>
+        /// Clears only the derived data, leaving the source data intact
+        /// </summary>
+        public void ClearDerived()
+        {
+            base.Clear();
+        }
+
+        /// <summary>
+        /// Clears both the source and the derived data
+        /// </summary>
+        public override void Clear()
+        {
+            base.Clear();
+            SourceData.Clear();
+        }
+
+        /// <summary>
+        /// Indicates if all of the available data is ready
+        /// </summary>
+        /// <returns>True if the DataSet contains all available data</returns>
+        public override bool IsReady()
+        {
+            return SourceData.IsReady() && (SourceData.DataSet.Count == DataSet.Count);
+        }
+
+        /// <summary>
+        /// Adds a new source point
+        /// </summary>
+        /// <param name="source">The source point to add</param>
+        public void Add(U source)
+        {
+            SourceData.DataSet.Add(source);
+            var datum = Create(SourceData.DataSet, SourceData.DataSet.Count - 1);
+            DataSet.Add(datum);
         }
     }
 }
