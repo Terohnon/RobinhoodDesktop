@@ -51,16 +51,6 @@ namespace RobinhoodDesktop
             SummaryBarPanel.Controls.Add(CloseButton);
             this.Controls.Add(SummaryBarPanel);
 
-            // Prevent scroll wheel when not over the scroll bar itself
-            this.MouseWheel += (object sender, MouseEventArgs e) =>
-            {
-                if(e.X < (this.Right - 15))
-                {
-                    ((HandledMouseEventArgs)e).Handled = true;
-                }
-
-            };
-
             this.Canvas = new Panel();
             this.Chart = new StockChart(symbol);
             Canvas.Controls.Add(Chart.Canvas);
