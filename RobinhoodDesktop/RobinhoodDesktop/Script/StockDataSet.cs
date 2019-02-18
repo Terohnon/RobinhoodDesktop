@@ -90,6 +90,34 @@ namespace RobinhoodDesktop.Script
         #endregion
 
         /// <summary>
+        /// Allows bracket operator to be used on the data set
+        /// </summary>
+        /// <param name="i">The index to access</param>
+        /// <returns>The specified item in the data set</returns>
+        public T this[int i]
+        {
+            get { return DataSet.InternalArray[i]; }
+        }
+
+        /// <summary>
+        /// Returns the time corresponding to the specified data point
+        /// </summary>
+        /// <param name="i">The data point index</param>
+        /// <returns>The time that data point was recorded</returns>
+        public DateTime Time(int i)
+        {
+            return Start.AddTicks(Interval.Ticks * i);
+        }
+
+        /// <summary>
+        /// The number of points in the data set
+        /// </summary>
+        public int Count
+        {
+            get { return DataSet.Count; }
+        }
+
+        /// <summary>
         /// Indicates if the data set has valid data
         /// </summary>
         /// <returns>True if data is available</returns>

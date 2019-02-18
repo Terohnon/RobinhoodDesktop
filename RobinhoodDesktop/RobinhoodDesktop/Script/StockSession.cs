@@ -55,9 +55,21 @@ namespace RobinhoodDesktop.Script
 
                 // Create the sink file
                 //SinkFile = new StockDataFile(new List<string>() { }, new List<string>() {  });
-                SinkFile = new StockDataFile(new List<string>() { "MovingAverage" }, new List<string>() { File.ReadAllText(@"Script/MovingAverage.cs") });
+                SinkFile = new StockDataFile(new List<string>() { "MovingAverage" }, new List<string>() { File.ReadAllText(@"Script/Data/MovingAverage.cs") });
                 script.Add("tmp/" + SINK_CLASS + ".cs");
                 using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SinkFile.GetSourceCode(SINK_CLASS));
+
+                // Create the analyzer file (needs to be compiled in the script since it references StockDataSource)
+                var analyzerFilename = "RobinhoodDesktop.Script.StockAnalyzer.cs";
+                script.Add("tmp/StockAnalyzer.cs");
+                StringBuilder analyzerCode = new StringBuilder();
+                analyzerCode.Append(new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream(analyzerFilename)).ReadToEnd());
+                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(StockDataFile.FormatSource(analyzerCode.ToString()));
+
+                // Add the user defined analyzers
+                string[] analyzerPaths = Directory.GetFiles(@"Script/Decision", "*.cs", SearchOption.AllDirectories);
+                foreach(string path in analyzerPaths) script.Add(path);
+
 
                 // Get the code that will actually run the session
                 script.Add("tmp/StockSessionScript.cs");
@@ -71,9 +83,14 @@ namespace RobinhoodDesktop.Script
                 var isDebug = false;
 #endif
 #if true
-                var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
-                var run = scriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockSessionScript.Run", this);
-                run(this);
+                try {
+                    var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
+                    var run = scriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockSessionScript.Run", this);
+                    run(this);
+                } catch(Exception ex)
+                {
+                    System.Windows.Forms.MessageBox.Show(ex.ToString());
+                }
 #else
                 // Set up the derived data sink
                 var sourceData = SourceFile.GetSegments<StockDataBase>();

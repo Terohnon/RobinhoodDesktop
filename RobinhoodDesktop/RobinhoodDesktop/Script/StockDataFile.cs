@@ -264,6 +264,17 @@ namespace RobinhoodDesktop.Script
                 code += sources[srcIdx];
             }
 
+            return FormatSource(code);
+        }
+
+        /// <summary>
+        /// Formats the source code per the C# compiler requirements.
+        /// Specifically, moves all using statements to the top.
+        /// </summary>
+        /// <param name="code">The concatinated source code files</param>
+        /// <returns>The formatted source code</returns>
+        public static string FormatSource(string code)
+        {
             // Move all using statements to the top of the file
             var usingStr = new StringBuilder();
             var otherStr = new StringBuilder();
