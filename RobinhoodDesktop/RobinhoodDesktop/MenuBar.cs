@@ -40,6 +40,7 @@ namespace RobinhoodDesktop
 
             MenuPanel.Controls.Add(new LogInButton(this));
             MenuPanel.Controls.Add(new ScriptButton(this));
+            MenuPanel.Controls.Add(new ScriptSessionButton(this));
             PackMenu();
         }
         #region Types
@@ -187,6 +188,22 @@ namespace RobinhoodDesktop
                 this.MouseUp += (sender, e) =>
                 {
                     new Script.StockSession().Run();
+                };
+            }
+        }
+
+        public class ScriptSessionButton : MenuButton
+        {
+            public ScriptSessionButton(MenuBar menu) : base(menu, "Content/GUI/Button_Live.png")
+            {
+                menu.OnShow += () =>
+                {
+                    this.ButtonText = "Session Script";
+                };
+
+                this.MouseUp += (sender, e) =>
+                {
+                    new Script.StockSession().RunSession();
                 };
             }
         }

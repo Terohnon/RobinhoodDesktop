@@ -57,6 +57,11 @@ namespace RobinhoodDesktop.Script
 
             public void Add(T element)
             {
+                if(m_array == null)
+                {
+                    m_array = new T[1];
+                    m_count = 0;
+                }
                 if(m_count == m_array.Length)
                 {
                     Array.Resize(ref m_array, m_array.Length * 2);

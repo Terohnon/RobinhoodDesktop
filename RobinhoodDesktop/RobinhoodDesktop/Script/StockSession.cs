@@ -33,6 +33,7 @@ namespace RobinhoodDesktop.Script
         {
             System.Windows.Forms.OpenFileDialog diag = new System.Windows.Forms.OpenFileDialog();
             diag.Multiselect = true;
+            diag.Title = "Open Stock Data File...";
             if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 List<string> script = new List<string>();
@@ -83,11 +84,13 @@ namespace RobinhoodDesktop.Script
                 var isDebug = false;
 #endif
 #if true
-                try {
+                try
+                {
                     var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
                     var run = scriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockSessionScript.Run", this);
                     run(this);
-                } catch(Exception ex)
+                }
+                catch(Exception ex)
                 {
                     System.Windows.Forms.MessageBox.Show(ex.ToString());
                 }
@@ -115,7 +118,59 @@ namespace RobinhoodDesktop.Script
                 // Cleanup
                 SourceFile.File.Close();
             }
-            
+
+        }
+
+
+        public void RunSession()
+        {
+            System.Windows.Forms.OpenFileDialog diag = new System.Windows.Forms.OpenFileDialog();
+            diag.Multiselect = false;
+            diag.Title = "Run Session Script...";
+            if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                List<string> script = new List<string>();
+                Directory.CreateDirectory("tmp");
+
+                SourceFile = new StockDataFile(new List<string>() { }, new List<string>() { });
+                script.Add("tmp/" + SOURCE_CLASS + ".cs");
+                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SourceFile.GetSourceCode(SOURCE_CLASS));
+
+                SinkFile = new StockDataFile(new List<string>() { "MovingAverage" }, new List<string>() { File.ReadAllText(@"Script/Data/MovingAverage.cs") });
+                script.Add("tmp/" + SINK_CLASS + ".cs");
+                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SinkFile.GetSourceCode(SINK_CLASS));
+
+                // Create the analyzer file (needs to be compiled in the script since it references StockDataSource)
+                var analyzerFilename = "RobinhoodDesktop.Script.StockAnalyzer.cs";
+                script.Add("tmp/StockAnalyzer.cs");
+                StringBuilder analyzerCode = new StringBuilder();
+                analyzerCode.Append(new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream(analyzerFilename)).ReadToEnd());
+                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(StockDataFile.FormatSource(analyzerCode.ToString()));
+
+                // Add the user defined analyzers
+                string[] analyzerPaths = Directory.GetFiles(@"Script/Decision", "*.cs", SearchOption.AllDirectories);
+                foreach(string path in analyzerPaths) script.Add(path);
+
+                // Get the code that will actually run the session
+                script.Add(diag.FileName);
+
+                // Build and run the session
+#if DEBUG
+                var isDebug = true;
+#else
+                var isDebug = false;
+#endif
+                try
+                {
+                    var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
+                    var run = scriptInstance.GetStaticMethod("*.Run", this);
+                    run(this);
+                }
+                catch(Exception ex)
+                {
+                    System.Windows.Forms.MessageBox.Show(ex.ToString());
+                }
+            }
         }
     }
 }

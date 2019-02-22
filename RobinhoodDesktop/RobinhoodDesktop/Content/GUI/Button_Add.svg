@@ -25,8 +25,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.98994949"
-     inkscape:cx="528.42819"
-     inkscape:cy="6.2229364"
+     inkscape:cx="344.03085"
+     inkscape:cy="-244.13426"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -158,7 +158,7 @@
        inkscape:export-xdpi="8.4507046"
        inkscape:export-ydpi="8.4507046" />
     <path
-       style="fill:#00ad91;fill-opacity:1;stroke:#00ad91;stroke-width:8.29248428;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       style="fill:#00ad91;fill-opacity:1;stroke:#00ad91;stroke-width:8.292;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
        d="m 612.90265,848.44988 17.28481,13.22774 -44.90256,58.86128 129.32796,0 0,29.06122 -129.32796,0 44.90256,52.78638 -17.28481,18.1484 -69.19682,-85.7328 z"
        id="path3003-1"
        inkscape:connector-curvature="0"
@@ -166,5 +166,27 @@
        inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\back.png"
        inkscape:export-xdpi="9.7577505"
        inkscape:export-ydpi="9.7577505" />
+    <path
+       sodipodi:type="arc"
+       style="fill:none;stroke:#00ad91;stroke-width:12.5348835;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path2985-1-7-1"
+       sodipodi:cx="244.28572"
+       sodipodi:cy="490.93362"
+       sodipodi:rx="124.28571"
+       sodipodi:ry="121.42857"
+       d="m 368.57143,490.93362 a 124.28571,121.42857 0 1 1 -248.57142,0 124.28571,121.42857 0 1 1 248.57142,0 z"
+       transform="matrix(0.78855054,0,0,0.80710465,30.61208,801.58934)"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Live.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725" />
+    <path
+       style="fill:none;stroke:#00ad91;stroke-width:20;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 167.68532,1246.3114 16.88398,-37.3756 16.88398,6.061 16.88398,-39.396 16.88397,33.335 16.88398,-16.1624 20.92459,-6.0611 12.84337,-46.4669"
+       id="path3012"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccc"
+       inkscape:export-filename="C:\johndl\RobinhoodDesktop\RobinhoodDesktop\RobinhoodDesktop\Content\GUI\Button_Live.png"
+       inkscape:export-xdpi="8.7416725"
+       inkscape:export-ydpi="8.7416725" />
   </g>
 </svg>
