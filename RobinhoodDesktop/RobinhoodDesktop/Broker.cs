@@ -68,6 +68,19 @@ namespace RobinhoodDesktop
             void GetPositionInfo(string symbol, PositionCallback callback);
 
             /// <summary>
+            /// Returns information about a current position whenever there is a change
+            /// </summary>
+            /// <param name="symbol">The symbol to request the position for</param>
+            /// <returns>The subscription instance</returns>
+            PositionSubscription SubscribeToPositionInfo(string symbol);
+
+            /// <summary>
+            /// Ends the specified subscription
+            /// </summary>
+            /// <param name="subscription">The subscription to stop</param>
+            void UnsubscribePosition(PositionSubscription subscription);
+
+            /// <summary>
             /// Retrives a list of the current orders
             /// </summary>
             /// <returns>The list of orders</returns>
@@ -124,7 +137,7 @@ namespace RobinhoodDesktop
         /// <param name="position">The position information</param>
         public delegate void PositionCallback(Position position);
 
-        public class Position
+        public struct Position
         {
             public string Symbol;
             public decimal AverageBuyPrice;
@@ -162,6 +175,21 @@ namespace RobinhoodDesktop
             public decimal AveragePrice;
             public decimal StopPrice;
             public decimal LimitPrice;
+        }
+
+        public class PositionSubscription
+        {
+            public Position PositionInfo;
+            public delegate void NotifyCallback(PositionSubscription subscription);
+            public NotifyCallback Notify;
+            public bool Dirty;
+            public DateTime LastUpdated;
+
+            public PositionSubscription(string symbol)
+            {
+                this.PositionInfo.Symbol = symbol;
+                this.Dirty = true;
+            }
         }
         #endregion
 

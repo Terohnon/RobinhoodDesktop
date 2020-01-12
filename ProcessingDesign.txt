@@ -1,0 +1,34 @@
+Data:
+    - Average
+    - Trend
+    - Support/Resistance Price
+
+Evaluators:
+    - Price Change
+        Stock
+        Start Price
+        Percentage change threshold
+        Up/Down
+    - AND
+    - OR
+    - THEN
+    - Rate of Change
+        Stock
+        Time Period
+        Rate of change threshold
+        Up/Down
+    - Data (Generic value)
+        Stock
+        Data value name
+        Comparison (>, <, =, !=)
+        Value to compare against
+        
+        
+Processing sequence
+    List of stock symbols - Items can be added/removed at any time. When added, must specify a StockDataSink as a reference point used by the evaluators.
+    -> Evaluator
+        -> Sub-evaluator(s)
+    -> Action (buy/sell/notify)
+    
+    
+    Processing.Add(symbol, time, data)

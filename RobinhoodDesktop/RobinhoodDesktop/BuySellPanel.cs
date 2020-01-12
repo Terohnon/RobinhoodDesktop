@@ -5,10 +5,16 @@ using System.Windows.Forms;
 
 namespace RobinhoodDesktop
 {
-    class BuySellPanel : Panel
+    public class BuySellPanel : Panel
     {
+        /// <summary>
+        /// Global acessor for the instance so that the buy/sell panel can be accessed
+        /// </summary>
+        public static BuySellPanel Instance;
+
         public BuySellPanel()
         {
+            Instance = this;
             this.BackColor = GuiStyle.BACKGROUND_COLOR;
 
             // Create the order type selection button

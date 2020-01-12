@@ -311,6 +311,27 @@ namespace CustomControls {
             }
         }
 
+
+        public void Attach(Panel p)
+        {
+            p.Resize += (sender, e) =>
+            {
+                this.Bounds = new Rectangle(p.Right + 5, p.Top, 10, p.Height);
+            };
+            this.Bounds = new Rectangle(p.Right + 5, p.Top, 10, p.Height);
+
+            this.Scroll += (sender, e) =>
+            {
+                this.Invalidate();
+                p.Visible = false;
+                p.VerticalScroll.Minimum = 0;
+                p.VerticalScroll.Maximum = this.Maximum;
+                p.VerticalScroll.Value = Math.Min(this.Value, this.Maximum);
+                p.VerticalScroll.Visible = false;
+                p.Visible = true;
+            };
+        }
+
         private void InitializeComponent() {
             this.SuspendLayout();
             // 

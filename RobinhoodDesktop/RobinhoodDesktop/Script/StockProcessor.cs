@@ -1,0 +1,261 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace RobinhoodDesktop.Script
+{
+    [Serializable]
+    public class StockProcessor
+    {
+        public StockProcessor()
+        {
+            HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource>.Derive(StockSession.SourceFile.GetSegments<StockDataSource>(), StockSession.SinkFile, createSink);
+        }
+
+        #region Types
+        [Serializable]
+        public class ProcessingTarget
+        {
+            public string Symbol;
+            public DateTime ReferenceTime;
+            public StockDataSink Reference;
+
+            public int ProcessedSetIdx;
+            public int ProcessedDataIdx;
+            public int ProcessedLiveIdx;
+            
+            public ProcessingTarget(string symbol, DateTime referenceTime, StockDataSink reference)
+            {
+                this.Symbol = symbol;
+                this.ReferenceTime = referenceTime;
+                this.Reference = reference;
+                this.ProcessedSetIdx = 0;
+                this.ProcessedDataIdx = 0;
+                this.ProcessedLiveIdx = 0;
+            }
+
+            public ProcessingTarget(string symbol)
+            {
+                this.Symbol = symbol;
+                this.ReferenceTime = DateTime.Now;
+                this.Reference = new StockDataSink();
+                this.ProcessedSetIdx = 0;
+                this.ProcessedDataIdx = 0;
+                this.ProcessedLiveIdx = 0;
+            }
+        }
+
+        /// <summary>
+        /// Specifies the options for keeping processed data in memory. Ideally all processed data would be kept,
+        /// but if there is not enough memory for that then some may be discarded once processing has completed.
+        /// </summary>
+        public enum MemoryScheme
+        {
+            MEM_KEEP_NONE,
+            MEM_KEEP_SOURCE,
+            MEM_KEEP_DERIVED
+        }
+        #endregion
+
+        #region Variables
+        /// <summary>
+        /// The list of stocks that will be processed
+        /// </summary>
+        public List<ProcessingTarget> Targets = new List<ProcessingTarget>();
+
+        /// <summary>
+        /// The historical data that can be processed
+        /// </summary>
+        [NonSerialized]
+        public Dictionary<string, List<StockDataSetDerived<StockDataSink, StockDataSource>>> HistoricalData;
+
+        /// <summary>
+        /// Indicates if the processor should operate on live data
+        /// </summary>
+        public bool Live = false;
+
+        /// <summary>
+        /// The analyzer(s) that should be used
+        /// </summary>
+        public StockEvaluator Evaluator;
+
+        /// <summary>
+        /// The action that should be executed when a target evaluates as true 
+        /// </summary>
+        public StockAction Action;
+
+        /// <summary>
+        /// Delegate executed when the processor has completed
+        /// </summary>
+        public Action Complete;
+
+        /// <summary>
+        /// The interval between samples when processing live data
+        /// </summary>
+        private TimeSpan LiveInterval;
+
+        /// <summary>
+        /// Stores live data as it is received
+        /// </summary>
+        [NonSerialized]
+        public Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource>, DataAccessor.Subscription>> LiveData;
+
+        /// <summary>
+        /// Queue used to indicate which targets have data available
+        /// </summary>
+        private System.Collections.Concurrent.BlockingCollection<ProcessingTarget> LiveProcessingQueue;
+
+        /// <summary>
+        /// The thread used to process the live data
+        /// </summary>
+        private System.Threading.Thread LiveThread;
+        #endregion
+
+        /// <summary>
+        /// Processes the specified data using the evaluator and resulting action
+        /// <param name="keep">Indicates if the processed data should remain in memory,
+        ///                                     or should be cleared once processing is complete.</param>
+        /// </summary>
+        public virtual void Process(MemoryScheme keep = MemoryScheme.MEM_KEEP_NONE)
+        {
+            // Process each of the targets
+            foreach(ProcessingTarget target in Targets)
+            {
+                List<StockDataSetDerived<StockDataSink, StockDataSource>> sets = HistoricalData[target.Symbol];
+                for(; target.ProcessedSetIdx < sets.Count; target.ProcessedSetIdx++)
+                {
+                    // Process all of the data sets for the target
+                    StockDataSetDerived<StockDataSink, StockDataSource> set = sets[target.ProcessedSetIdx];
+                    set.Load();
+                    for(; (target.ProcessedDataIdx < set.Count); target.ProcessedDataIdx++)
+                    {
+                        if(Evaluator.Evaluate(set, target.ProcessedDataIdx, target))
+                        {
+                            Action.Do(this, target, set.Time(target.ProcessedDataIdx));
+                        }
+                    }
+
+                    // Clean up the memory after processing has completed
+                    if(keep == MemoryScheme.MEM_KEEP_NONE) set.Clear();
+                    else if(keep == MemoryScheme.MEM_KEEP_SOURCE) set.ClearDerived();
+                }
+            }
+
+            // Indicate processing has completed
+            if(Complete != null) Complete();
+        }
+
+        /// <summary>
+        /// Adds a new processing target
+        /// </summary>
+        /// <param name="target">The target point to add</param>
+        public void Add(ProcessingTarget target)
+        {
+            Targets.Add(target);
+
+            // If live, set up a subscription
+            if(Live && !LiveData.ContainsKey(target.Symbol))
+            {
+                var sourceList = new StockDataSet<StockDataSource>(target.Symbol, DateTime.Now, StockSession.SourceFile);
+                var data = new StockDataSetDerived<StockDataSink, StockDataSource>(sourceList, StockSession.SinkFile, createSink);
+                var sub = DataAccessor.Subscribe(target.Symbol, LiveInterval);
+                sub.Notify += (DataAccessor.Subscription s) =>
+                {
+                    LiveData[s.Symbol].Item1.Add(StockDataSource.CreateFromPrice((float)s.Price));
+                    LiveProcessingQueue.Add(target);
+                };
+
+                LiveData[target.Symbol] = new Tuple<StockDataSetDerived<StockDataSink, StockDataSource>, DataAccessor.Subscription>(data, sub);
+            }
+        }
+
+        /// <summary>
+        /// Removes a target from the processor
+        /// </summary>
+        /// <param name="target">The target to remove</param>
+        public void Remove(ProcessingTarget target)
+        {
+            bool lastEntryForSymbol = true;
+            foreach(var t in Targets)
+            {
+                if(t.Symbol.Equals(target.Symbol))
+                {
+                    lastEntryForSymbol = false;
+                    break;
+                }
+            }
+
+            if(lastEntryForSymbol)
+            {
+                // Un-subscribe if this is the last instance of that symbol
+                DataAccessor.Unsubscribe(LiveData[target.Symbol].Item2);
+                LiveData.Remove(target.Symbol);
+            }
+
+            Targets.Remove(target);
+        }
+
+        /// <summary>
+        /// Instructs the processor to access live stock data
+        /// </summary>
+        /// <param name="liveInterval">The interval at which to access the live data</param>
+        public void SetLive(TimeSpan? liveInterval = null)
+        {
+            this.LiveData = new Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource>, DataAccessor.Subscription>>();
+            this.LiveInterval = ((liveInterval != null) ? liveInterval.Value : new TimeSpan(0, 0, 1));
+            this.Live = true;
+
+            this.LiveProcessingQueue = new System.Collections.Concurrent.BlockingCollection<ProcessingTarget>();
+            this.LiveThread = new System.Threading.Thread(ProcessLive);
+            this.LiveThread.Start();
+        }
+
+        /// <summary>
+        /// Ends any ongoing processing and closes the processor
+        /// </summary>
+        public void Close()
+        {
+            if(LiveProcessingQueue != null)
+            {
+                LiveProcessingQueue.CompleteAdding();
+            }
+        }
+
+        /// <summary>
+        /// Task for processing live data
+        /// </summary>
+        private void ProcessLive()
+        {
+            foreach(var target in LiveProcessingQueue.GetConsumingEnumerable())
+            {
+                StockDataSetDerived<StockDataSink, StockDataSource> set = LiveData[target.Symbol].Item1;
+                if(target.Reference.Price == 0) target.Reference = set[0];
+
+                for(; (target.ProcessedLiveIdx < set.Count); target.ProcessedLiveIdx++)
+                {
+                    if(Evaluator.Evaluate(set, target.ProcessedLiveIdx, target))
+                    {
+                        Action.Do(this, target, set.Time(target.ProcessedLiveIdx));
+                    }
+                }
+            }
+        }
+
+        #region Utilities
+        /// <summary>
+        /// Creates a new instance of a StockDataSink based on a StockDataSource
+        /// </summary>
+        /// <param name="data">Source data</param>
+        /// <param name="idx">Index in the source data to base the new point off of</param>
+        /// <returns></returns>
+        private StockDataSink createSink(StockDataSet<StockDataSource>.StockDataArray data, int idx)
+        {
+            var point = new StockDataSink();
+            point.Update(data, idx);
+            return point;
+        }
+        #endregion
+    }
+}

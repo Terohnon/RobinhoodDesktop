@@ -181,11 +181,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <EmbeddedResource Include="Script\StockDataScript.cs" />
-    <Content Include="Script\Decision\PriceMonitor.cs">
+    <Content Include="Script\Action\StockAction.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Script\Decision\PriceEvaluator.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Compile Include="Script\StockDataBase.cs" />
     <Compile Include="Script\StockDataSetDerived.cs" />
+    <EmbeddedResource Include="Script\StockProcessor.cs" />
     <Compile Include="Script\StockSession.cs" />
     <EmbeddedResource Include="Script\StockSessionScript.cs" />
     <Content Include="Script\StockSessionLiveScript.cs">
@@ -194,7 +198,7 @@
     <Compile Include="SearchList.cs">
       <SubType>Component</SubType>
     </Compile>
-    <EmbeddedResource Include="Script\StockAnalyzer.cs" />
+    <EmbeddedResource Include="Script\StockEvaluator.cs" />
     <Compile Include="StockChart.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

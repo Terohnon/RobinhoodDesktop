@@ -259,12 +259,17 @@ namespace RobinhoodDesktop
         /// <summary>
         /// Mutex used to protect access to the pending history request list
         /// </summary>
-        private Mutex HistoryMutex = new Mutex();
+        private Mutex RobinhoodThreadMutex = new Mutex();
 
         /// <summary>
         /// Mutex used to protect access to the active order list
         /// </summary>
         private Mutex ActiveOrderMutex = new Mutex();
+
+        /// <summary>
+        /// List of active position subscriptions
+        /// </summary>
+        private List<Broker.PositionSubscription> PositionSubscriptions = new List<Broker.PositionSubscription>();
 
         /// <summary>
         /// The stored position information
@@ -304,9 +309,9 @@ namespace RobinhoodDesktop
         {
             if(!string.IsNullOrEmpty(symbol))
             {
-                HistoryMutex.WaitOne();
+                RobinhoodThreadMutex.WaitOne();
                 HistoryRequests.Add(new HistoryRequest(symbol, start, end, interval, callback));
-                HistoryMutex.ReleaseMutex();
+                RobinhoodThreadMutex.ReleaseMutex();
             }
             else
             {
@@ -342,7 +347,7 @@ namespace RobinhoodDesktop
         /// <param name="callback">Callback executed with the results</param>
         public void GetQuote(List<string> symbols, DataAccessor.PriceDataCallback callback)
         {
-            if(symbols.Count > 0)
+            if((symbols.Count > 0) && (Client.isAuthenticated))
             {
                 Client.DownloadQuote(symbols).ContinueWith((results) =>
                 {
@@ -539,6 +544,36 @@ namespace RobinhoodDesktop
         }
 
         /// <summary>
+        /// Returns information about a current position whenever there is a change
+        /// </summary>
+        /// <param name="symbol">The symbol to request the position for</param>
+        /// <returns>The subscription instance</returns>
+        public Broker.PositionSubscription SubscribeToPositionInfo(string symbol)
+        {
+            var subscription = new Broker.PositionSubscription(symbol);
+            if(RobinhoodThreadMutex.WaitOne(100))
+            {
+                PositionSubscriptions.Add(subscription);
+                RobinhoodThreadMutex.ReleaseMutex();
+            }
+
+            return subscription;
+        }
+
+        /// <summary>
+        /// Ends the specified subscription
+        /// </summary>
+        /// <param name="subscription">The subscription to stop</param>
+        public void UnsubscribePosition(Broker.PositionSubscription subscription)
+        {
+            if(RobinhoodThreadMutex.WaitOne(100))
+            {
+                PositionSubscriptions.Remove(subscription);
+                RobinhoodThreadMutex.ReleaseMutex();
+            }
+        }
+
+        /// <summary>
         /// Retrives a list of the current orders
         /// </summary>
         /// <returns>The list of orders</returns>
@@ -644,7 +679,7 @@ namespace RobinhoodDesktop
                     while((HistoryRequests.Count > 0) && Running)
                     {
                         // Put together a single request
-                        HistoryMutex.WaitOne();
+                        RobinhoodThreadMutex.WaitOne();
                         DateTime start = HistoryRequests[0].Start;
                         DateTime end = HistoryRequests[0].End;
                         TimeSpan interval = getHistoryInterval(HistoryRequests[0].Interval, getHistoryTimeSpan(start, end));
@@ -661,7 +696,7 @@ namespace RobinhoodDesktop
                                 end = ((end > HistoryRequests[i].End) ? end : HistoryRequests[i].End);
                             }
                         }
-                        HistoryMutex.ReleaseMutex();
+                        RobinhoodThreadMutex.ReleaseMutex();
 
                         // Make the request
                         if((getHistoryTimeSpan(start, end) >= HISTORY_SPANS.ElementAt(HISTORY_SPANS.Count - 1).Key) ||          // If requesting too far back in history
@@ -708,13 +743,36 @@ namespace RobinhoodDesktop
                         }
 
                         // Remove the processed requests from the queue
-                        HistoryMutex.WaitOne();
+                        RobinhoodThreadMutex.WaitOne();
                         for(int i = servicedIndices.Count - 1; i >= 0; i--)
                         {
                             HistoryRequests.RemoveAt(servicedIndices[i]);
                         }
-                        HistoryMutex.ReleaseMutex();
+                        RobinhoodThreadMutex.ReleaseMutex();
                     }
+                }
+
+                // Process the position subscriptions
+                if(RobinhoodThreadMutex.WaitOne(0))
+                {
+                    for(int i = 0; Client.isAuthenticated && (i < PositionSubscriptions.Count); i++)
+                    {
+                        Broker.PositionSubscription sub = PositionSubscriptions[i];
+                        var orderInfo = ActiveOrders.Find((a) => { return a.Symbol.Equals(sub.PositionInfo.Symbol); });
+                        if(((DateTime.Now - sub.LastUpdated).TotalSeconds > 5) &&
+                            (sub.Dirty || ((orderInfo != null) && (orderInfo.RefreshedAt != sub.LastUpdated))))
+                        {
+                            sub.LastUpdated = DateTime.Now;
+                            GetPositionInfo(sub.PositionInfo.Symbol, (info) =>
+                            {
+                                sub.PositionInfo = info;
+                                sub.LastUpdated = ((orderInfo != null) ? orderInfo.RefreshedAt : DateTime.Now);
+                                sub.Dirty = false;
+                                if(sub.Notify != null) sub.Notify(sub);
+                            });
+                        }
+                    }
+                    RobinhoodThreadMutex.ReleaseMutex();
                 }
 
                 // Update the active orders

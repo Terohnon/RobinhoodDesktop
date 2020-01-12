@@ -41,6 +41,11 @@ namespace RobinhoodDesktop
         public static readonly System.Drawing.Color DARK_GREY = System.Drawing.Color.FromArgb(255, 27, 27, 29);
 
         /// <summary>
+        /// The color of a notification background
+        /// </summary>
+        public static readonly System.Drawing.Color NOTIFICATION_COLOR = System.Drawing.Color.FromArgb(255, 255, 105, 0);
+
+        /// <summary>
         /// The name of the font to use
         /// </summary>
         public const string FONT_NAME = "monospace";

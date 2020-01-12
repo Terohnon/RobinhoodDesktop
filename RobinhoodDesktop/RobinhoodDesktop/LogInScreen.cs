@@ -12,7 +12,7 @@ namespace RobinhoodDesktop
     {
         public LogInScreen()
         {
-            Background = new Panel();
+            GuiPanel = new Panel();
 
             GuiBox = new Panel();
             GuiBox.AutoSize = true;
@@ -56,11 +56,11 @@ namespace RobinhoodDesktop
                 e.Graphics.DrawString(ErrorText, GuiStyle.Font, errorBrush, new Point(Username.Location.X, Username.Location.Y - 40), StringFormat.GenericDefault);
             };
 
-            Background.BackColor = GuiStyle.BACKGROUND_COLOR;
-            Background.Controls.Add(GuiBox);
-            Background.Resize += (sender, e) =>
+            GuiPanel.BackColor = GuiStyle.BACKGROUND_COLOR;
+            GuiPanel.Controls.Add(GuiBox);
+            GuiPanel.Resize += (sender, e) =>
             {
-                GuiBox.Location = new System.Drawing.Point((Background.Width / 2) - (GuiBox.Width / 2), (Background.Height / 2) - (GuiBox.Height / 2));
+                GuiBox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (GuiBox.Width / 2), (GuiPanel.Height / 2) - (GuiBox.Height / 2));
             };
         }
 
@@ -68,7 +68,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The background panel for the login screen
         /// </summary>
-        public Panel Background;
+        public Panel GuiPanel;
 
         /// <summary>
         /// A box containing the main GUI elements (to make them easier to re-position)

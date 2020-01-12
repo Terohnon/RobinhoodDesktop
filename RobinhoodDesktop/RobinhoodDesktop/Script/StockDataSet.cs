@@ -92,6 +92,14 @@ namespace RobinhoodDesktop.Script
             get { return File.Interval; }
         }
         public readonly StockDataArray DataSet = new StockDataArray();
+
+        /// <summary>
+        /// Returns the last item in the data set
+        /// </summary>
+        public T Last
+        {
+            get { return DataSet.InternalArray[DataSet.InternalArray.Count() - 1]; }
+        }
         #endregion
 
         /// <summary>

@@ -16,6 +16,34 @@ namespace RobinhoodDesktop.Script
     [Serializable]
     public class StockDataFile
     {
+        /// <summary>
+        /// Reads the instance from the stream
+        /// </summary>
+        /// <param name="s">The stream to read from</param>
+        /// <returns>The stock file instance</returns>
+        public static StockDataFile Open(Stream s)
+        {
+            var des = new Serializer(new List<Type>() { typeof(StockDataFile) });
+            long address = (long)des.Deserialize(s);
+            s.Seek(address, SeekOrigin.Begin);
+            var newFile = (StockDataFile)des.Deserialize(s);
+            newFile.File = s;
+            return newFile;
+        }
+
+        /// <summary>
+        /// Opens a group of files and agregates them into one source
+        /// </summary>
+        /// <param name="files">The stream of files to open</param>
+        /// <returns>The agregate stock data file</returns>
+        public static StockDataFile Open(List<Stream> files)
+        {
+            StockDataFile file;
+            if(files.Count > 1) file = new AgregatorFile(files);
+            else file = Open(files.First());
+            return file;
+        }
+
         public StockDataFile(List<string> fields, List<string> sources)
         {
             this.Fields = fields;
@@ -26,6 +54,14 @@ namespace RobinhoodDesktop.Script
         {
             this.Fields = new List<string>();
             this.SourceCode = GenSourceCode(new List<string>()).ToArray();
+        }
+
+        /// <summary>
+        /// Closes the file stream
+        /// </summary>
+        public void Close()
+        {
+            this.File.Close();
         }
 
 #region Stored Data
@@ -78,6 +114,180 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         [NonSerialized]
         public Stream File;
+
+        /// <summary>
+        /// A progress indicator [0 - UInt32.MaxValue] which can be used for long operations
+        /// </summary>
+        [NonSerialized]
+        public UInt32 Progress;
+        #endregion
+
+        #region Agregator Class
+        public class AgregatorFile : StockDataFile
+        {
+            /// <summary>
+            /// The source files being agregated
+            /// </summary>
+            [NonSerialized]
+            public List<Tuple<StockDataFile, Type>> Sources = new List<Tuple<StockDataFile, Type>>();
+
+            /// <summary>
+            /// The method used to load a segment from the source file(s)
+            /// </summary>
+            [NonSerialized]
+            private MethodDelegate LoadMethod;
+
+            /// <summary>
+            /// Constructor for a file agregator
+            /// </summary>
+            /// <param name="files">The streams containing the source files</param>
+            public AgregatorFile(List<Stream> files)
+            {
+                // Open the source files
+                int count = 0;
+                List<FieldInfo> fields = new List<FieldInfo>();
+                List<FieldInfo[]> sourceFields = new List<FieldInfo[]>();
+                Interval = TimeSpan.MaxValue;
+
+                foreach(var s in files)
+                {
+                    var f = StockDataFile.Open(s);
+                    
+                    try
+                    {
+                        // Get the members in the source
+                        string typeName = "Source" + count.ToString();
+                        var scriptInstance = CSScript.LoadCode(f.GetSourceCode(typeName).Replace("StockDataSource", typeName), null);
+                        Type t = scriptInstance.DefinedTypes.Where((scriptType) => { return scriptType.Name.Equals(typeName); }).First();
+                        var fieldList = t.GetFields();
+                        sourceFields.Add(fieldList);
+                        foreach(var field in fieldList)
+                        {
+                            if(!fields.Contains(field))
+                            {
+                                fields.Add(field);
+                            }
+                        }
+
+                        // Check the date range included in the source
+                        foreach(var pair in f.Segments)
+                        {
+                            List<Tuple<DateTime, long>> segList;
+                            if(!this.Segments.TryGetValue(pair.Key, out segList))
+                            {
+                                segList = new List<Tuple<DateTime, long>>();
+                                this.Segments.Add(pair.Key, segList);
+                            }
+                            foreach(var seg in pair.Value)
+                            {
+                                if(segList.Find((ele) => { return ele.Item1.Equals(seg.Item1); }) == null)
+                                {
+                                    segList.Add(new Tuple<DateTime, long>(seg.Item1, long.MaxValue));
+                                }
+                            }
+                        }
+
+                        // Use the smallest interval from among the sources
+                        this.Interval = ((f.Interval < this.Interval) ? f.Interval : this.Interval);
+
+                        // Remember the source file
+                        Sources.Add(new Tuple<StockDataFile, Type>(f, t));
+                    }
+                    catch(Exception ex)
+                    {
+                        System.Windows.Forms.MessageBox.Show(ex.ToString());
+                    }
+                }
+
+                // Generate the source code based on the member list
+                var code = GenSourceCode(fields, sourceFields).Replace("StockDataScript", "StockDataSource");
+                this.SourceCode = code.ToArray();
+            }
+
+            /// <summary>
+            /// Loads the segment data from the source
+            /// </summary>
+            /// <typeparam name="T">The data point type</typeparam>
+            /// <param name="segment">The segment to populate</param>
+            public override void LoadSegment<T>(StockDataSet<T> segment)
+            {
+                if(this.LoadMethod == null)
+                {
+                    this.LoadMethod = StockSession.ScriptInstance.GetStaticMethod("*.Load", this, "", DateTime.Now);
+                }
+                segment.DataSet.Initialize((T[])LoadMethod(this, segment.Symbol, segment.Start));
+            }
+
+            /// <summary>
+            /// Generates the source code for the agregator
+            /// </summary>
+            /// <param name="members">The list of members that should be present in the agregator</param>
+            /// <param name="sourceMembers">The list of members owned by each source</param>
+            /// <returns></returns>
+            private String GenSourceCode(List<FieldInfo> fields, List<FieldInfo[]> sourceFields)
+            {
+                var code = "";
+                var assembly = Assembly.GetExecutingAssembly();
+                var scriptFilename = "RobinhoodDesktop.Script.StockDataScript.cs";
+
+                using(Stream stream = assembly.GetManifestResourceStream(scriptFilename))
+                using(StreamReader reader = new StreamReader(stream))
+                {
+                    code = reader.ReadToEnd();
+                    string memberDecl = "";
+                    foreach(var f in fields)
+                    {
+                        if(!f.Name.Equals("Price"))
+                        {
+                            memberDecl += "public " + f.FieldType.ToString() + " " + f.Name.ToString() + ";\n";
+                        }
+                    }
+                    memberDecl = memberDecl.Replace("\n", "\n        ");
+
+                    // Add the agregate file specific functionality
+                    string loader =
+                        "#region Loader\n" +
+                        "public static StockDataSource[] Load(StockDataFile.AgregatorFile f, string symbol, DateTime start)\n" +
+                        "{\n" +
+                            "\tint maxCount = 0;\n";
+                    for(int idx = 0; idx < Sources.Count; idx++)
+                    {
+                        string i = idx.ToString();
+                        loader += "\tSource" + i + "[] s" + i + " = f.Sources[" + i + "].Item1.LoadData<Source" + i + ">(symbol, start);\n";
+                        loader += "\tmaxCount = ((maxCount > s" + i + ".Length) ? maxCount : s" + i + ".Length);\n";
+                    }
+                    loader +=
+                        "\tStockDataSource[] s = new StockDataSource[maxCount];\n" +
+                        "\tfor(int i = 0; i < maxCount; i++)\n" +
+                        "\t{\n";
+                    for(int idx = 0; idx < Sources.Count; idx++)
+                    {
+                        string i = idx.ToString();
+                        loader += "\t\tif(s" + i + ".Length > i) {\n";
+                        foreach(var f in sourceFields[idx])
+                        {
+                            loader += "\t\t\ts[i]." + f.Name + " = s" + i + "[i]." + f.Name + ";\n";
+                        }
+                        loader += "\t\t}\n";
+                    }
+                    loader +=
+                        "\t}\n" +
+                        "\treturn s;\n" +
+                        "}\n" +
+                        "#endregion\n";
+
+                    // Add the custom functionality to the script
+                    memberDecl += loader.Replace("\n", "\n        ");
+                    code = code.Replace("///= Members ///", memberDecl);
+                    for(int idx = 0; idx < Sources.Count; idx++)
+                    {
+                        code += new string(Sources[idx].Item1.SourceCode).Replace("StockDataScript", "Source" + idx.ToString());
+                    }
+                }
+
+                return FormatSource(code);
+            }
+        }
         #endregion
 
         /// <summary>
@@ -138,19 +348,33 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <typeparam name="T">The data point type</typeparam>
         /// <param name="segment">The segment to populate</param>
-        public void LoadSegment<T>(StockDataSet<T> segment) where T : struct, StockData
+        public virtual void LoadSegment<T>(StockDataSet<T> segment) where T : struct, StockData
         {
-            var des = new Serializer(new List<Type>() { typeof(T).MakeArrayType() });
-            foreach(Tuple<DateTime, long> t in this.Segments[segment.Symbol])
+            segment.DataSet.Initialize(LoadData<T>(segment.Symbol, segment.Start));
+        }
+
+        /// <summary>
+        /// Utility to load an array of data points from the file
+        /// </summary>
+        /// <typeparam name="T">The data point type</typeparam>
+        /// <param name="symbol">The stock symbol</param>
+        /// <param name="start">The period start time</param>
+        /// <returns>An array of loaded data points</returns>
+        public T[] LoadData<T>(string symbol, DateTime start) where T : struct, StockData
+        {
+            T[] data = null;
+            foreach(Tuple<DateTime, long> t in this.Segments[symbol])
             {
-                if(t.Item1 == segment.Start)
+                if(t.Item1 == start)
                 {
                     File.Seek(t.Item2, SeekOrigin.Begin);
-                    //segment.DataSet.Initialize((T[])des.Deserialize(File));
-                    segment.DataSet.Initialize(Load<T>(File));
+                    data = Load<T>(File);
                     break;
                 }
             }
+
+            if(data == null) data = new T[0];
+            return data;
         }
 
         /// <summary>
@@ -165,7 +389,7 @@ namespace RobinhoodDesktop.Script
 
 
             // Serialize the segments
-            s.Seek(0x10, SeekOrigin.End);
+            s.Seek(0x10, SeekOrigin.End);   // Leave some space at the beginning of the stream to store the offset to the serialized stock file
             foreach(KeyValuePair<string, List<StockDataSet<T>>> pair in segments)
             {
                 List<Tuple<DateTime, long>> allSegments = this.Segments[pair.Key];
@@ -197,30 +421,13 @@ namespace RobinhoodDesktop.Script
                 }
             }
 
-            // Re-serialize the header with the updated segment addresses
+            // Serialize the header with the updated segment addresses
             this.HeaderAddress = s.Position;
             headerSer.Serialize(s, this);
 
             // Set the offset to the header
             s.Seek(0, SeekOrigin.Begin);
             headerSer.Serialize(s, this.HeaderAddress);
-        }
-
-        
-
-        /// <summary>
-        /// Reads the instance from the stream
-        /// </summary>
-        /// <param name="s">The stream to read from</param>
-        /// <returns>The stock file instance</returns>
-        public static StockDataFile Open(Stream s)
-        {
-            var des = new Serializer(new List<Type>() { typeof(StockDataFile) });
-            long address = (long)des.Deserialize(s);
-            s.Seek(address, SeekOrigin.Begin);
-            var newFile = (StockDataFile)des.Deserialize(s);
-            newFile.File = s;
-            return newFile;
         }
 
         /// <summary>

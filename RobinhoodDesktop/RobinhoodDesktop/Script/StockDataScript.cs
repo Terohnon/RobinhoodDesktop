@@ -35,6 +35,8 @@ namespace RobinhoodDesktop.Script
         /// The price the stock was last traded at during this time
         /// </summary>
         public float Price;
+
+        ///= Members ///
         #endregion
 
         #region Prototypes

@@ -27,12 +27,12 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="source">The source data</param>
         /// <returns>The derived data</returns>
-        public static Dictionary<string, List<StockDataSet<T>>> Derive(Dictionary<string, List<StockDataSet<U>>> source, StockDataFile file, StockDataCreator create)
+        public static Dictionary<string, List<StockDataSetDerived<T, U>>> Derive(Dictionary<string, List<StockDataSet<U>>> source, StockDataFile file, StockDataCreator create)
         {
-            Dictionary<string, List<StockDataSet<T>>> derived = new Dictionary<string, List<StockDataSet<T>>>();
+            var derived = new Dictionary<string, List<StockDataSetDerived<T, U>>>();
             foreach(KeyValuePair<string, List<StockDataSet<U>>> pair in source)
             {
-                derived[pair.Key] = new List<StockDataSet<T>>(pair.Value.Count);
+                derived[pair.Key] = new List<StockDataSetDerived<T, U>>(pair.Value.Count);
                 foreach(StockDataSet<U> srcSet in pair.Value)
                 {
                     derived[pair.Key].Add(new StockDataSetDerived<T, U>(srcSet, file, create));

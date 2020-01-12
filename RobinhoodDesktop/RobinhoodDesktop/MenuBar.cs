@@ -117,6 +117,11 @@ namespace RobinhoodDesktop
         /// The screen displayed to allow the user to log in
         /// </summary>
         public LogInScreen LogIn = new LogInScreen();
+
+        /// <summary>
+        /// The screen displayed to allow the user to configure the scripts to run
+        /// </summary>
+        public AlgorithmScreen Algorithm = new AlgorithmScreen();
         #endregion
 
         /// <summary>
@@ -148,26 +153,29 @@ namespace RobinhoodDesktop
                     if(!Broker.Instance.IsSignedIn())
                     {
                         // Show the log in screen, and bring it to the front
-                        menu.MenuPanel.Parent.Controls.Add(menu.LogIn.Background);
-                        menu.MenuPanel.Parent.Controls.SetChildIndex(menu.LogIn.Background, 0);
-                        menu.LogIn.Background.Size = menu.MenuPanel.Parent.Size;
+                        menu.MenuPanel.Parent.Controls.Add(menu.LogIn.GuiPanel);
+                        menu.MenuPanel.Parent.Controls.SetChildIndex(menu.LogIn.GuiPanel, 0);
+                        menu.LogIn.GuiPanel.Size = menu.MenuPanel.Parent.Size;
+                        menu.Hide();
                     }
                     else
                     {
                         Broker.Instance.SignOut();
+                        menu.Hide();
                     }
                 };
 
                 // Add logic for when the user interacts with the log-in screen
                 menu.LogIn.CancelButton.MouseUp += (sender, e) =>
                 {
-                    menu.MenuPanel.Parent.Controls.Remove(menu.LogIn.Background);
+                    if(menu.LogIn.GuiPanel.Parent != null) menu.LogIn.GuiPanel.Parent.Controls.Remove(menu.LogIn.GuiPanel);
+                    menu.Hide();
                 };
                 menu.LogIn.LogInButton.MouseUp += (sender, e) =>
                 {
                     if(Broker.Instance.IsSignedIn())
                     {
-                        menu.MenuPanel.Parent.Controls.Remove(menu.LogIn.Background);
+                        if(menu.LogIn.GuiPanel.Parent != null) menu.LogIn.GuiPanel.Parent.Controls.Remove(menu.LogIn.GuiPanel);
                         menu.Hide();
                     }
                 };
@@ -187,7 +195,17 @@ namespace RobinhoodDesktop
 
                 this.MouseUp += (sender, e) =>
                 {
-                    new Script.StockSession().Run();
+                    // Show the script in screen, and bring it to the front
+                    menu.MenuPanel.Parent.Controls.Add(menu.Algorithm.GuiPanel);
+                    menu.MenuPanel.Parent.Controls.SetChildIndex(menu.Algorithm.GuiPanel, 0);
+                    menu.Algorithm.GuiPanel.Size = menu.MenuPanel.Parent.Size;
+                };
+
+                // Add logic for when the user clicks the back button on the script screen
+                menu.Algorithm.BackButton.MouseUp += (sender, e) =>
+                {
+                    menu.MenuPanel.Parent.Controls.Remove(menu.Algorithm.GuiPanel);
+                    menu.Hide();
                 };
             }
         }
@@ -204,6 +222,7 @@ namespace RobinhoodDesktop
                 this.MouseUp += (sender, e) =>
                 {
                     new Script.StockSession().RunSession();
+                    menu.Hide();
                 };
             }
         }

@@ -281,6 +281,7 @@ namespace RobinhoodDesktop
             {
                 Accessor.GetQuote(updateSymbols, (dt) =>
                 {
+                    if(dt == null) return;
                     foreach(DataRow stock in dt.Rows)
                     {
                         foreach(var sub in Subscriptions[(string)stock["Symbol"]])

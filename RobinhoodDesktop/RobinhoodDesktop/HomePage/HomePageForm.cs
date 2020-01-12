@@ -163,13 +163,26 @@ namespace RobinhoodDesktop.HomePage
             StockListHome.Location = new Point(SearchHome.Location.X, SearchHome.Location.Y + 100);
             StockListHome.Size = new Size(300, 300);
             StockListHome.AddStockUi += CreateStockChart;
+            StockListHome.GroupOrder = new List<string>()
+            {
+                StockList.NOTIFICATIONS,
+                StockList.ORDERS,
+                StockList.POSITIONS,
+                StockList.WATCHLIST
+            };
             Controls.Add(StockListHome);
 
             // Create the menu
             Menu = new MenuBar();
             Menu.ToggleButton.Location = new Point(20, 20);
             Menu.LogIn.RememberLogIn.Checked = Config.RememberLogin;
-            Menu.LogIn.LogInButton.MouseUp += (sender, e) => { HomePageForm_AccountUpdate(); };
+            Menu.LogIn.LogInButton.MouseUp += (sender, e) => {
+                HomePageForm_AccountUpdate();
+                if(Broker.Instance.IsSignedIn())
+                {
+                    SaveConfig();
+                }
+            };
             Controls.Add(Menu.ToggleButton);
 
             // Set up the resize handler
@@ -316,13 +329,8 @@ namespace RobinhoodDesktop.HomePage
             }
         }
 
-        private void HomePageForm_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void SaveConfig()
         {
-            UiUpdateTick.Stop();
-            while(UiUpdateTick.Enabled) ;
-            Robinhood.Close();
-            DataAccessor.Close();
-
             Config.LocalWatchlist.Clear();
             List<StockList.StockLine> watchlist;
             if(StockListHome.Stocks.TryGetValue(StockList.WATCHLIST, out watchlist))
@@ -346,6 +354,16 @@ namespace RobinhoodDesktop.HomePage
 
             // Save the current user configuration
             Config.Save(UserConfig.CONFIG_FILE);
+        }
+
+        private void HomePageForm_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            UiUpdateTick.Stop();
+            while(UiUpdateTick.Enabled) ;
+            Robinhood.Close();
+            DataAccessor.Close();
+
+            SaveConfig();
         }
     }
 }
