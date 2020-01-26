@@ -11,8 +11,28 @@ namespace RobinhoodDesktop
 {
     public class AlgorithmScreen
     {
-        public AlgorithmScreen()
+        [Serializable]
+        public class AlgorithmScreenConfig
         {
+            /// <summary>
+            /// A list of paths to source data files, separated with \n
+            /// </summary>
+            public string SourceFiles = "";
+
+            /// <summary>
+            /// List of scripts that analyze the stock point data
+            /// </summary>
+            public List<string> DataScripts = new List<string>();
+
+            /// <summary>
+            /// The path to the session script to run
+            /// </summary>
+            public string SessionScript = "";
+        }
+
+        public AlgorithmScreen(AlgorithmScreenConfig config = null)
+        {
+            this.Cfg = ((config != null) ? config : new AlgorithmScreenConfig());
             GuiPanel = new Panel();
 
             GuiBox = new Panel();
@@ -73,6 +93,16 @@ namespace RobinhoodDesktop
             DataFileTextbox.WordWrap = false;
             DataFileTextbox.BackColor = GuiStyle.DARK_GREY;
             DataFileTextbox.ForeColor = GuiStyle.TEXT_COLOR;
+            DataFileTextbox.Text = Cfg.SourceFiles.Replace("\n", "\r\n");
+            if(!string.IsNullOrEmpty(DataFileTextbox.Text))
+            {
+                DataFileButton.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
+                DataLiveButton.SetImage(GuiButton.ButtonImage.GREEN_TRANSPARENT);
+            }
+            DataFileTextbox.TextChanged += (sender, e) =>
+            {
+                Cfg.SourceFiles = DataFileTextbox.Text;
+            };
             GuiBox.Controls.Add(DataFileTextbox);
 
             // Add the GUI for selecting the data scripts
@@ -113,53 +143,14 @@ namespace RobinhoodDesktop
                     {
                         // Skip this item if it has already been loaded
                         var script = scriptPath;
-                        if(DataScripts.Contains(script)) continue;
+                        if(Cfg.DataScripts.Contains(script)) continue;
 
-                        // Add a label for the script
-                        int yPos = (DataScriptListPanel.Controls.Count > 0) ? DataScriptListPanel.Controls[DataScriptListPanel.Controls.Count - 1].Bounds.Bottom + 5 : 5;
-                        var scriptLabel = new Label();
-                        scriptLabel.Text = script.Substring(script.Replace('\\', '/').LastIndexOf("/") + 1);
-                        scriptLabel.Width = (DataScriptListPanel.Width - 5) - scriptLabel.Location.X;
-                        scriptLabel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
-                        scriptLabel.Width = (DataScriptListPanel.Width - scriptLabel.Location.X - 30);
-                        DataScriptListPanel.Controls.Add(scriptLabel);
-
-                        // Add a remove button for the script
-                        var removeButton = new PictureBox();
-                        removeButton.Image = Bitmap.FromFile("Content/GUI/Button_Close.png");
-                        removeButton.Size = new Size(removeButton.Image.Width, removeButton.Image.Height);
-                        scriptLabel.LocationChanged += (sScript, eScript) =>
-                        {
-                            removeButton.Location = new Point(DataScriptListPanel.Width - removeButton.Width - 5, scriptLabel.Location.Y - ((removeButton.Height - scriptLabel.Height) / 2));
-                        };
-                        removeButton.MouseUp += (subSender, subE) =>
-                        {
-                            if(DataScriptListPanel.Controls.Contains(scriptLabel))
-                            {
-                                DataScriptListPanel.Controls.Remove(scriptLabel);
-                                DataScriptListPanel.Controls.Remove(removeButton);
-
-                                // Pack the list to fill the gaps
-                                int packPos = 5;
-                                foreach(Control c in DataScriptListPanel.Controls)
-                                {
-                                    if(c.GetType().Equals(typeof(Label)))
-                                    {
-                                        c.Location = new Point(c.Location.X, packPos);
-                                        packPos = c.Bounds.Bottom + 5;
-                                    }
-                                }
-                            }
-                            var pathIdx = DataScripts.IndexOf(script);
-                            if(pathIdx >= 0) DataScripts.RemoveAt(pathIdx);
-                        };
-                        DataScriptListPanel.Controls.Add(removeButton);
-
-                        scriptLabel.Location = new Point(5, yPos);
-                        DataScripts.Add(script);
+                        AddDataScript(script);
+                        Cfg.DataScripts.Add(script);
                     }
                 }
             };
+            foreach(var script in Cfg.DataScripts) AddDataScript(script);
             GuiBox.Controls.Add(DataScriptAddButton);
 
             // Create the GUI to select the decision and result script
@@ -184,6 +175,11 @@ namespace RobinhoodDesktop
                     DecisionScriptTextbox.Text = diag.FileName;
                 }
             };
+            DecisionScriptTextbox.Text = Cfg.SessionScript;
+            DecisionScriptTextbox.TextChanged += (sender, e) =>
+            {
+                Cfg.SessionScript = DecisionScriptTextbox.Text;
+            };
             GuiBox.Controls.Add(DecisionScriptButton);
             Label decisionScriptLabel = new Label();
             decisionScriptLabel.Text = "Decision Script";
@@ -197,7 +193,7 @@ namespace RobinhoodDesktop
             StartButton.Location = new Point(DecisionScriptTextbox.Bounds.Right + 50, DecisionScriptTextbox.Bounds.Top);
             StartButton.MouseUp += (sender, e) =>
             {
-                Script.StockSession.Start(DataFileTextbox.Text.Replace("\r", "").Split('\n').ToList(), DataScripts, DecisionScriptTextbox.Text);
+                Script.StockSession.Start(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts, Cfg.SessionScript);
             };
             GuiPanel.Controls.Add(StartButton);
 
@@ -221,6 +217,11 @@ namespace RobinhoodDesktop
 
         #region Variables
         /// <summary>
+        /// The configurable values for the screen
+        /// </summary>
+        public AlgorithmScreenConfig Cfg;
+
+        /// <summary>
         /// Stores the configuration used to generate the session
         /// </summary>
         public Script.StockSession Session;
@@ -234,11 +235,6 @@ namespace RobinhoodDesktop
         /// Button that exits this screen
         /// </summary>
         public PictureBox BackButton;
-
-        /// <summary>
-        /// List of scripts that analyze the stock point data
-        /// </summary>
-        public List<string> DataScripts = new List<string>();
 
         /// <summary>
         /// A box containing the main GUI elements (to make them easier to re-position)
@@ -259,6 +255,55 @@ namespace RobinhoodDesktop
         private void RefreshDataListPanel()
         {
 
+        }
+
+        /// <summary>
+        /// Adds the GUI elements for a data script
+        /// </summary>
+        /// <param name="script"></param>
+        private void AddDataScript(string script)
+        {
+            // Add a label for the script
+            int yPos = (DataScriptListPanel.Controls.Count > 0) ? DataScriptListPanel.Controls[DataScriptListPanel.Controls.Count - 1].Bounds.Bottom + 5 : 5;
+            var scriptLabel = new Label();
+            scriptLabel.Text = script.Substring(script.Replace('\\', '/').LastIndexOf("/") + 1);
+            scriptLabel.Width = (DataScriptListPanel.Width - 5) - scriptLabel.Location.X;
+            scriptLabel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
+            scriptLabel.Width = (DataScriptListPanel.Width - scriptLabel.Location.X - 30);
+            DataScriptListPanel.Controls.Add(scriptLabel);
+
+            // Add a remove button for the script
+            var removeButton = new PictureBox();
+            removeButton.Image = Bitmap.FromFile("Content/GUI/Button_Close.png");
+            removeButton.Size = new Size(removeButton.Image.Width, removeButton.Image.Height);
+            scriptLabel.LocationChanged += (sScript, eScript) =>
+            {
+                removeButton.Location = new Point(DataScriptListPanel.Width - removeButton.Width - 5, scriptLabel.Location.Y - ((removeButton.Height - scriptLabel.Height) / 2));
+            };
+            removeButton.MouseUp += (subSender, subE) =>
+            {
+                if(DataScriptListPanel.Controls.Contains(scriptLabel))
+                {
+                    DataScriptListPanel.Controls.Remove(scriptLabel);
+                    DataScriptListPanel.Controls.Remove(removeButton);
+
+                    // Pack the list to fill the gaps
+                    int packPos = 5;
+                    foreach(Control c in DataScriptListPanel.Controls)
+                    {
+                        if(c.GetType().Equals(typeof(Label)))
+                        {
+                            c.Location = new Point(c.Location.X, packPos);
+                            packPos = c.Bounds.Bottom + 5;
+                        }
+                    }
+                }
+                var pathIdx = Cfg.DataScripts.IndexOf(script);
+                if(pathIdx >= 0) Cfg.DataScripts.RemoveAt(pathIdx);
+            };
+            DataScriptListPanel.Controls.Add(removeButton);
+
+            scriptLabel.Location = new Point(5, yPos);
         }
     }
 }

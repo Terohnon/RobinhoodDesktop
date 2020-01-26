@@ -45,6 +45,11 @@ namespace RobinhoodDesktop
         /// A list of the open stock charts, and the corresponding options.
         /// </summary>
         public List<StockChartPanel.StockUIConfig> StockCharts = new List<StockChartPanel.StockUIConfig>();
+
+        /// <summary>
+        /// The configuration for the algorithm screen
+        /// </summary>
+        public AlgorithmScreen.AlgorithmScreenConfig AlgorithmScreenConfig = new AlgorithmScreen.AlgorithmScreenConfig();
         #endregion
 
         /// <summary>

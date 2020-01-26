@@ -91,6 +91,10 @@ namespace RobinhoodDesktop.Script
         {
             get { return File.Interval; }
         }
+
+        /// <summary>
+        /// The array holding the stock data points
+        /// </summary>
         public readonly StockDataArray DataSet = new StockDataArray();
 
         /// <summary>
@@ -110,6 +114,14 @@ namespace RobinhoodDesktop.Script
         public T this[int i]
         {
             get { return DataSet.InternalArray[i]; }
+        }
+
+        /// <summary>
+        /// Accesses the underlying data point array
+        /// </summary>
+        public T[] Data
+        {
+            get { return DataSet.InternalArray; }
         }
 
         /// <summary>

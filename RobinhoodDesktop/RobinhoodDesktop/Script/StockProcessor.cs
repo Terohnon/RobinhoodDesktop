@@ -11,7 +11,11 @@ namespace RobinhoodDesktop.Script
     {
         public StockProcessor()
         {
-            HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource>.Derive(StockSession.SourceFile.GetSegments<StockDataSource>(), StockSession.SinkFile, createSink);
+            // Load the source file static information
+            StockSession.SourceFile.LoadStaticData();
+
+            // Create the derived data set
+            HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.Derive(StockSession.SourceFile.GetSegments<StockDataSource>(), StockSession.SinkFile, createSink);
         }
 
         #region Types
@@ -57,6 +61,7 @@ namespace RobinhoodDesktop.Script
             MEM_KEEP_SOURCE,
             MEM_KEEP_DERIVED
         }
+
         #endregion
 
         #region Variables
@@ -69,7 +74,7 @@ namespace RobinhoodDesktop.Script
         /// The historical data that can be processed
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, List<StockDataSetDerived<StockDataSink, StockDataSource>>> HistoricalData;
+        public Dictionary<string, List<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>>> HistoricalData;
 
         /// <summary>
         /// Indicates if the processor should operate on live data
@@ -100,7 +105,7 @@ namespace RobinhoodDesktop.Script
         /// Stores live data as it is received
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource>, DataAccessor.Subscription>> LiveData;
+        public Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>, DataAccessor.Subscription>> LiveData;
 
         /// <summary>
         /// Queue used to indicate which targets have data available
@@ -115,19 +120,21 @@ namespace RobinhoodDesktop.Script
 
         /// <summary>
         /// Processes the specified data using the evaluator and resulting action
+        /// <param name="multithreaded">Indicates if the processing should be done multithreaded</param>
         /// <param name="keep">Indicates if the processed data should remain in memory,
         ///                                     or should be cleared once processing is complete.</param>
         /// </summary>
-        public virtual void Process(MemoryScheme keep = MemoryScheme.MEM_KEEP_NONE)
+        public virtual void Process(bool multithreaded = false, MemoryScheme keep = MemoryScheme.MEM_KEEP_NONE)
         {
-            // Process each of the targets
-            foreach(ProcessingTarget target in Targets)
+            System.Action<ProcessingTarget> processFunc = (ProcessingTarget target) =>
             {
-                List<StockDataSetDerived<StockDataSink, StockDataSource>> sets = HistoricalData[target.Symbol];
+                List<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>> sets = HistoricalData[target.Symbol];
+                var processingState = new StockProcessingState();
                 for(; target.ProcessedSetIdx < sets.Count; target.ProcessedSetIdx++)
                 {
                     // Process all of the data sets for the target
-                    StockDataSetDerived<StockDataSink, StockDataSource> set = sets[target.ProcessedSetIdx];
+                    StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> set = sets[target.ProcessedSetIdx];
+                    set.ProcessingState = processingState;
                     set.Load();
                     for(; (target.ProcessedDataIdx < set.Count); target.ProcessedDataIdx++)
                     {
@@ -140,6 +147,19 @@ namespace RobinhoodDesktop.Script
                     // Clean up the memory after processing has completed
                     if(keep == MemoryScheme.MEM_KEEP_NONE) set.Clear();
                     else if(keep == MemoryScheme.MEM_KEEP_SOURCE) set.ClearDerived();
+                }
+            };
+
+            // Process each of the targets
+            if(multithreaded)
+            {
+                System.Threading.Tasks.Parallel.ForEach(Targets, processFunc);
+            }
+            else
+            {
+                foreach(ProcessingTarget target in Targets)
+                {
+                    processFunc(target);
                 }
             }
 
@@ -159,7 +179,7 @@ namespace RobinhoodDesktop.Script
             if(Live && !LiveData.ContainsKey(target.Symbol))
             {
                 var sourceList = new StockDataSet<StockDataSource>(target.Symbol, DateTime.Now, StockSession.SourceFile);
-                var data = new StockDataSetDerived<StockDataSink, StockDataSource>(sourceList, StockSession.SinkFile, createSink);
+                var data = new StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>(sourceList, StockSession.SinkFile, createSink);
                 var sub = DataAccessor.Subscribe(target.Symbol, LiveInterval);
                 sub.Notify += (DataAccessor.Subscription s) =>
                 {
@@ -167,7 +187,7 @@ namespace RobinhoodDesktop.Script
                     LiveProcessingQueue.Add(target);
                 };
 
-                LiveData[target.Symbol] = new Tuple<StockDataSetDerived<StockDataSink, StockDataSource>, DataAccessor.Subscription>(data, sub);
+                LiveData[target.Symbol] = new Tuple<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>, DataAccessor.Subscription>(data, sub);
             }
         }
 
@@ -203,7 +223,7 @@ namespace RobinhoodDesktop.Script
         /// <param name="liveInterval">The interval at which to access the live data</param>
         public void SetLive(TimeSpan? liveInterval = null)
         {
-            this.LiveData = new Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource>, DataAccessor.Subscription>>();
+            this.LiveData = new Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>, DataAccessor.Subscription>>();
             this.LiveInterval = ((liveInterval != null) ? liveInterval.Value : new TimeSpan(0, 0, 1));
             this.Live = true;
 
@@ -230,7 +250,7 @@ namespace RobinhoodDesktop.Script
         {
             foreach(var target in LiveProcessingQueue.GetConsumingEnumerable())
             {
-                StockDataSetDerived<StockDataSink, StockDataSource> set = LiveData[target.Symbol].Item1;
+                StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> set = LiveData[target.Symbol].Item1;
                 if(target.Reference.Price == 0) target.Reference = set[0];
 
                 for(; (target.ProcessedLiveIdx < set.Count); target.ProcessedLiveIdx++)
@@ -249,12 +269,9 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="data">Source data</param>
         /// <param name="idx">Index in the source data to base the new point off of</param>
-        /// <returns></returns>
-        private StockDataSink createSink(StockDataSet<StockDataSource>.StockDataArray data, int idx)
+        private void createSink(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int idx)
         {
-            var point = new StockDataSink();
-            point.Update(data, idx);
-            return point;
+            data.DataSet.InternalArray[idx].Update(data, idx);
         }
         #endregion
     }

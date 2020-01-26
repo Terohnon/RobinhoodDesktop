@@ -28,6 +28,8 @@ namespace RobinhoodDesktop.Script
             s.Seek(address, SeekOrigin.Begin);
             var newFile = (StockDataFile)des.Deserialize(s);
             newFile.File = s;
+            newFile.LoadAddress = s.Position;
+            newFile.FileMutex = new System.Threading.Mutex();
             return newFile;
         }
 
@@ -39,7 +41,7 @@ namespace RobinhoodDesktop.Script
         public static StockDataFile Open(List<Stream> files)
         {
             StockDataFile file;
-            if(files.Count > 1) file = new AgregatorFile(files);
+            if(files.Count > 1) file = new AggregatorFile(files);
             else file = Open(files.First());
             return file;
         }
@@ -59,9 +61,10 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Closes the file stream
         /// </summary>
-        public void Close()
+        public virtual void Close()
         {
-            this.File.Close();
+            if(this.File != null) this.File.Close();
+            this.File = null;
         }
 
 #region Stored Data
@@ -104,10 +107,10 @@ namespace RobinhoodDesktop.Script
         public Dictionary<string, List<Tuple<DateTime, long>>> Segments = new Dictionary<string, List<Tuple<DateTime, long>>>();
 
         /// <summary>
-        /// The address where the header is written to in the file
+        /// The address where additional data can be loaded from in the file
         /// </summary>
         [NonSerialized]
-        private long HeaderAddress = -1;
+        private long LoadAddress = -1;
 
         /// <summary>
         /// The hard copy of the data
@@ -116,20 +119,26 @@ namespace RobinhoodDesktop.Script
         public Stream File;
 
         /// <summary>
+        /// Controls access to the source file
+        /// </summary>
+        [NonSerialized]
+        private System.Threading.Mutex FileMutex = new System.Threading.Mutex();
+
+        /// <summary>
         /// A progress indicator [0 - UInt32.MaxValue] which can be used for long operations
         /// </summary>
         [NonSerialized]
         public UInt32 Progress;
         #endregion
 
-        #region Agregator Class
-        public class AgregatorFile : StockDataFile
+        #region Aggregator Class
+        public class AggregatorFile : StockDataFile
         {
             /// <summary>
             /// The source files being agregated
             /// </summary>
             [NonSerialized]
-            public List<Tuple<StockDataFile, Type>> Sources = new List<Tuple<StockDataFile, Type>>();
+            public List<StockDataFile> Sources = new List<StockDataFile>();
 
             /// <summary>
             /// The method used to load a segment from the source file(s)
@@ -141,7 +150,7 @@ namespace RobinhoodDesktop.Script
             /// Constructor for a file agregator
             /// </summary>
             /// <param name="files">The streams containing the source files</param>
-            public AgregatorFile(List<Stream> files)
+            public AggregatorFile(List<Stream> files)
             {
                 // Open the source files
                 int count = 0;
@@ -159,7 +168,7 @@ namespace RobinhoodDesktop.Script
                         string typeName = "Source" + count.ToString();
                         var scriptInstance = CSScript.LoadCode(f.GetSourceCode(typeName).Replace("StockDataSource", typeName), null);
                         Type t = scriptInstance.DefinedTypes.Where((scriptType) => { return scriptType.Name.Equals(typeName); }).First();
-                        var fieldList = t.GetFields();
+                        var fieldList = t.GetFields(BindingFlags.Public | BindingFlags.Instance);
                         sourceFields.Add(fieldList);
                         foreach(var field in fieldList)
                         {
@@ -191,7 +200,7 @@ namespace RobinhoodDesktop.Script
                         this.Interval = ((f.Interval < this.Interval) ? f.Interval : this.Interval);
 
                         // Remember the source file
-                        Sources.Add(new Tuple<StockDataFile, Type>(f, t));
+                        Sources.Add(f);
                     }
                     catch(Exception ex)
                     {
@@ -202,6 +211,33 @@ namespace RobinhoodDesktop.Script
                 // Generate the source code based on the member list
                 var code = GenSourceCode(fields, sourceFields).Replace("StockDataScript", "StockDataSource");
                 this.SourceCode = code.ToArray();
+            }
+
+            /// <summary>
+            /// Closes the file stream
+            /// </summary>
+            public override void Close()
+            {
+                foreach(var s in Sources)
+                {
+                    s.Close();
+                }
+            }
+
+            /// <summary>
+            /// Loads any additional static information from the file
+            /// </summary>
+            public override void LoadStaticData()
+            {
+                for(int idx = 0; idx < Sources.Count; idx++)
+                {
+                    var src = Sources[idx];
+                    var loadMethod = StockSession.ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.Source" + idx + ".Load", src.File);
+                    src.FileMutex.WaitOne();
+                    src.File.Seek(src.LoadAddress, SeekOrigin.Begin);
+                    loadMethod(src.File);
+                    src.FileMutex.ReleaseMutex();
+                }
             }
 
             /// <summary>
@@ -247,13 +283,13 @@ namespace RobinhoodDesktop.Script
                     // Add the agregate file specific functionality
                     string loader =
                         "#region Loader\n" +
-                        "public static StockDataSource[] Load(StockDataFile.AgregatorFile f, string symbol, DateTime start)\n" +
+                        "public static StockDataSource[] Load(StockDataFile.AggregatorFile f, string symbol, DateTime start)\n" +
                         "{\n" +
                             "\tint maxCount = 0;\n";
                     for(int idx = 0; idx < Sources.Count; idx++)
                     {
                         string i = idx.ToString();
-                        loader += "\tSource" + i + "[] s" + i + " = f.Sources[" + i + "].Item1.LoadData<Source" + i + ">(symbol, start);\n";
+                        loader += "\tSource" + i + "[] s" + i + " = f.Sources[" + i + "].LoadData<Source" + i + ">(symbol, start);\n";
                         loader += "\tmaxCount = ((maxCount > s" + i + ".Length) ? maxCount : s" + i + ".Length);\n";
                     }
                     loader +=
@@ -281,7 +317,7 @@ namespace RobinhoodDesktop.Script
                     code = code.Replace("///= Members ///", memberDecl);
                     for(int idx = 0; idx < Sources.Count; idx++)
                     {
-                        code += new string(Sources[idx].Item1.SourceCode).Replace("StockDataScript", "Source" + idx.ToString());
+                        code += new string(Sources[idx].SourceCode).Replace("StockDataScript", "Source" + idx.ToString());
                     }
                 }
 
@@ -289,6 +325,18 @@ namespace RobinhoodDesktop.Script
             }
         }
         #endregion
+
+        /// <summary>
+        /// Loads any additional static information from the file
+        /// </summary>
+        public virtual void LoadStaticData()
+        {
+            var loadMethod = StockSession.ScriptInstance.GetStaticMethod("*.Load", File);
+            FileMutex.WaitOne();
+            File.Seek(LoadAddress, SeekOrigin.Begin);
+            loadMethod(File);
+            FileMutex.ReleaseMutex();
+        }
 
         /// <summary>
         /// Loads a segment from the source stream into a usable object
@@ -321,10 +369,10 @@ namespace RobinhoodDesktop.Script
         }
 
         /// <summary>
-        /// Saves the 
+        /// Sets the stock data segments which are present in this file
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="segment"></param>
+        /// <typeparam name="T">The data point type</typeparam>
+        /// <param name="segments">The set of segments to specify for this file</param>
         public void SetSegments<T>(Dictionary<string, List<StockDataSet<T>>> segments) where T : struct, StockData
         {
             this.Start = DateTime.MaxValue;
@@ -350,7 +398,9 @@ namespace RobinhoodDesktop.Script
         /// <param name="segment">The segment to populate</param>
         public virtual void LoadSegment<T>(StockDataSet<T> segment) where T : struct, StockData
         {
+            FileMutex.WaitOne();
             segment.DataSet.Initialize(LoadData<T>(segment.Symbol, segment.Start));
+            FileMutex.ReleaseMutex();
         }
 
         /// <summary>
@@ -422,12 +472,19 @@ namespace RobinhoodDesktop.Script
             }
 
             // Serialize the header with the updated segment addresses
-            this.HeaderAddress = s.Position;
+            long headerAddress = s.Position;
             headerSer.Serialize(s, this);
+
+            // Save any script-specific data
+            if(StockSession.ScriptInstance != null)
+            {
+                var saveMethod = StockSession.ScriptInstance.GetStaticMethod("*.Save", s);
+                saveMethod(s);
+            }
 
             // Set the offset to the header
             s.Seek(0, SeekOrigin.Begin);
-            headerSer.Serialize(s, this.HeaderAddress);
+            headerSer.Serialize(s, headerAddress);
         }
 
         /// <summary>
@@ -457,13 +514,21 @@ namespace RobinhoodDesktop.Script
                 code = reader.ReadToEnd();
                 string prototypes = "";
                 string updates = "";
+                string saves = "";
+                string loads = "";
                 foreach(string name in this.Fields)
                 {
-                    prototypes += "partial void " + name + "_Update(StockDataSet<StockDataSource>.StockDataArray data, int updateIndex);\n";
+                    prototypes += "partial void " + name + "_Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex);\n";
+                    prototypes += "static partial void " + name + "_Save(System.IO.Stream file);\n";
+                    prototypes += "static partial void " + name + "_Load(System.IO.Stream file);\n";
                     updates += name + "_Update(data, updateIndex);\n";
+                    saves += name + "_Save(file);\n";
+                    loads += name + "_Load(file);\n";
                 }
                 code = code.Replace("///= PartialPrototypes ///", prototypes.Replace("\n", "\n        "));
                 code = code.Replace("///= PartialUpdates ///", updates.Replace("\n", "\n                "));
+                code = code.Replace("///= PartialSaves ///", saves.Replace("\n", "\n                "));
+                code = code.Replace("///= PartialLoads ///", loads.Replace("\n", "\n                "));
             }
 
             for(int srcIdx = 0; srcIdx < sources.Count; srcIdx++)
@@ -587,6 +652,14 @@ namespace RobinhoodDesktop.Script
                             float price;
                             if(float.TryParse(stockPricesStr[i + 1], out price))
                             {
+                                if(price == 0.0f)
+                                {
+                                    price = fileData[i].Last.Price;
+                                    if(price == 0.0f)
+                                    {
+                                        continue;
+                                    }
+                                }
                                 while(fileData[i].End <= newTime)
                                 {
                                     fileData[i].DataSet.Add(new StockDataBase(price));

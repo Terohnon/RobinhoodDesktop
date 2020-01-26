@@ -173,7 +173,7 @@ namespace RobinhoodDesktop.HomePage
             Controls.Add(StockListHome);
 
             // Create the menu
-            Menu = new MenuBar();
+            Menu = new MenuBar(Config);
             Menu.ToggleButton.Location = new Point(20, 20);
             Menu.LogIn.RememberLogIn.Checked = Config.RememberLogin;
             Menu.LogIn.LogInButton.MouseUp += (sender, e) => {

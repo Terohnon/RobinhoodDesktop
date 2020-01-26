@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RobinhoodDesktop.Script
 {
-    public class StockDataSetDerived<T, U> : StockDataSet<T> where T : struct, StockData where U : struct, StockData 
+    public class StockDataSetDerived<T, U, V> : StockDataSet<T> where T : struct, StockData where U : struct, StockData 
     {
         public StockDataSetDerived(StockDataSet<U> source, StockDataFile file, StockDataCreator create)
         {
@@ -27,15 +27,15 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="source">The source data</param>
         /// <returns>The derived data</returns>
-        public static Dictionary<string, List<StockDataSetDerived<T, U>>> Derive(Dictionary<string, List<StockDataSet<U>>> source, StockDataFile file, StockDataCreator create)
+        public static Dictionary<string, List<StockDataSetDerived<T, U, V>>> Derive(Dictionary<string, List<StockDataSet<U>>> source, StockDataFile file, StockDataCreator create)
         {
-            var derived = new Dictionary<string, List<StockDataSetDerived<T, U>>>();
+            var derived = new Dictionary<string, List<StockDataSetDerived<T, U, V>>>();
             foreach(KeyValuePair<string, List<StockDataSet<U>>> pair in source)
             {
-                derived[pair.Key] = new List<StockDataSetDerived<T, U>>(pair.Value.Count);
+                derived[pair.Key] = new List<StockDataSetDerived<T, U, V>>(pair.Value.Count);
                 foreach(StockDataSet<U> srcSet in pair.Value)
                 {
-                    derived[pair.Key].Add(new StockDataSetDerived<T, U>(srcSet, file, create));
+                    derived[pair.Key].Add(new StockDataSetDerived<T, U, V>(srcSet, file, create));
                 }
             }
 
@@ -49,6 +49,11 @@ namespace RobinhoodDesktop.Script
         public StockDataSet<U> SourceData;
 
         /// <summary>
+        /// Custom state information that can be referenced while processing the data set
+        /// </summary>
+        public V ProcessingState;
+
+        /// <summary>
         /// Callback used to create a derived data point
         /// </summary>
         public StockDataCreator Create;
@@ -58,8 +63,7 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Callback used to create a stock data instance
         /// </summary>
-        /// <returns>The created stock data instance</returns>
-        public delegate T StockDataCreator(StockDataSet<U>.StockDataArray data, int idx);
+        public delegate void StockDataCreator(StockDataSetDerived<T, U, V> data, int idx);
         #endregion
 
         /// <summary>
@@ -73,9 +77,9 @@ namespace RobinhoodDesktop.Script
                 DataSet.Resize(SourceData.DataSet.Count);
                 for(int idx = DataSet.Count; idx < SourceData.DataSet.Count; idx++)
                 {
-                    var datum = Create(SourceData.DataSet, idx);
-                    DataSet.Add(datum);
+                    Create(this, idx);
                 }
+                DataSet.Initialize(DataSet.InternalArray);
             }
         }
 
@@ -112,8 +116,8 @@ namespace RobinhoodDesktop.Script
         public void Add(U source)
         {
             SourceData.DataSet.Add(source);
-            var datum = Create(SourceData.DataSet, SourceData.DataSet.Count - 1);
-            DataSet.Add(datum);
+            DataSet.Add(new T());
+            Create(this, SourceData.DataSet.Count - 1);
         }
     }
 }

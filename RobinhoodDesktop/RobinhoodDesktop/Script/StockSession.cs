@@ -74,6 +74,11 @@ namespace RobinhoodDesktop.Script
                     convertedFile.Close();
                     sources.Add(saveDiag.FileName);
                 }
+                else
+                {
+                    // Cancel running the script
+                    return null;
+                }
                 foreach(var l in legacyFiles) sources.Remove(l);
             }
 
@@ -125,6 +130,9 @@ namespace RobinhoodDesktop.Script
             {
                 System.Windows.Forms.MessageBox.Show(ex.ToString());
             }
+
+            // Cleanup
+            SourceFile.Close();
 
             return session;
         }
@@ -216,7 +224,7 @@ namespace RobinhoodDesktop.Script
 #endif
 
                 // Cleanup
-                SourceFile.File.Close();
+                SourceFile.Close();
             }
 
         }

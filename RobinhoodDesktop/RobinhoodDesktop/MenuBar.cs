@@ -10,8 +10,10 @@ namespace RobinhoodDesktop
 {
     public class MenuBar
     {
-        public MenuBar()
+        public MenuBar(UserConfig config)
         {
+            Algorithm = new AlgorithmScreen(config.AlgorithmScreenConfig);
+
             MenuPanel = new Panel();
             MenuPanel.BackColor = Color.White;
             MenuPanel.Size = new Size(150, 400);
@@ -121,7 +123,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The screen displayed to allow the user to configure the scripts to run
         /// </summary>
-        public AlgorithmScreen Algorithm = new AlgorithmScreen();
+        public AlgorithmScreen Algorithm;
         #endregion
 
         /// <summary>

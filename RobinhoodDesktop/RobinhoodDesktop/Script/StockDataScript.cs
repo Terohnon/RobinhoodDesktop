@@ -13,6 +13,16 @@ namespace RobinhoodDesktop.Script
 
     }
 
+    public partial struct StockDataSink : StockData
+    {
+
+    }
+
+    public partial class StockProcessingState
+    {
+
+    }
+
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
     public partial struct StockDataScript : StockData
@@ -48,11 +58,29 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="data">The available source data</param>
         /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
-        public void Update(StockDataSet<StockDataSource>.StockDataArray data, int updateIndex)
+        public void Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex)
         {
-            this.Price = data.InternalArray[updateIndex].Price;
+            this.Price = data.SourceData.DataSet.InternalArray[updateIndex].Price;
 
             ///= PartialUpdates ///
+        }
+
+        /// <summary>
+        /// Stores any extra metadata into the file
+        /// </summary>
+        /// <param name="file">The file to save the data to</param>
+        public static void Save(System.IO.Stream file)
+        {
+            ///= PartialSaves ///
+        }
+
+        /// <summary>
+        /// Loads any extra metadata from the file
+        /// </summary>
+        /// <param name="file">The file to load from</param>
+        public static void Load(System.IO.Stream file)
+        {
+            ///= PartialLoads ///
         }
     }
 }
