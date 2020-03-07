@@ -226,13 +226,14 @@ namespace RobinhoodDesktop.Script
 
             /// <summary>
             /// Loads any additional static information from the file
+            /// <param name="session">The session this is being loaded as part of</param>
             /// </summary>
-            public override void LoadStaticData()
+            public override void LoadStaticData(StockSession session)
             {
                 for(int idx = 0; idx < Sources.Count; idx++)
                 {
                     var src = Sources[idx];
-                    var loadMethod = StockSession.ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.Source" + idx + ".Load", src.File);
+                    var loadMethod = session.ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.Source" + idx + ".Load", src.File);
                     src.FileMutex.WaitOne();
                     src.File.Seek(src.LoadAddress, SeekOrigin.Begin);
                     loadMethod(src.File);
@@ -244,12 +245,13 @@ namespace RobinhoodDesktop.Script
             /// Loads the segment data from the source
             /// </summary>
             /// <typeparam name="T">The data point type</typeparam>
+            /// <param name="session">The session this is part of</param>
             /// <param name="segment">The segment to populate</param>
-            public override void LoadSegment<T>(StockDataSet<T> segment)
+            public override void LoadSegment<T>(StockDataSet<T> segment, StockSession session = null)
             {
-                if(this.LoadMethod == null)
+                if((this.LoadMethod == null) && (session != null))
                 {
-                    this.LoadMethod = StockSession.ScriptInstance.GetStaticMethod("*.Load", this, "", DateTime.Now);
+                    this.LoadMethod = session.ScriptInstance.GetStaticMethod("*.Load", this, "", DateTime.Now);
                 }
                 segment.DataSet.Initialize((T[])LoadMethod(this, segment.Symbol, segment.Start));
             }
@@ -328,10 +330,11 @@ namespace RobinhoodDesktop.Script
 
         /// <summary>
         /// Loads any additional static information from the file
+        /// <param name="session">The session this is part of</param>
         /// </summary>
-        public virtual void LoadStaticData()
+        public virtual void LoadStaticData(StockSession session)
         {
-            var loadMethod = StockSession.ScriptInstance.GetStaticMethod("*.Load", File);
+            var loadMethod = session.ScriptInstance.GetStaticMethod("*.Load", File);
             FileMutex.WaitOne();
             File.Seek(LoadAddress, SeekOrigin.Begin);
             loadMethod(File);
@@ -396,7 +399,8 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <typeparam name="T">The data point type</typeparam>
         /// <param name="segment">The segment to populate</param>
-        public virtual void LoadSegment<T>(StockDataSet<T> segment) where T : struct, StockData
+        /// <param name="session">The session this is part of</param>
+        public virtual void LoadSegment<T>(StockDataSet<T> segment, StockSession session = null) where T : struct, StockData
         {
             FileMutex.WaitOne();
             segment.DataSet.Initialize(LoadData<T>(segment.Symbol, segment.Start));
@@ -430,8 +434,9 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Save this instance to the stream
         /// </summary>
+        /// <param name="session">The session this is part of</param>
         /// <param name="s">The stream to save this to</param>
-        public void Save<T>(Stream s, Type dataType, Dictionary<string, List<StockDataSet<T>>> segments) where T : struct, StockData
+        public void Save<T>(Stream s, Type dataType, Dictionary<string, List<StockDataSet<T>>> segments, StockSession session = null) where T : struct, StockData
         {
             var headerSer = new Serializer(new List<Type>() { typeof(StockDataFile) });
             var dataSer = new Serializer(new List<Type>() { dataType.MakeArrayType() });
@@ -476,9 +481,9 @@ namespace RobinhoodDesktop.Script
             headerSer.Serialize(s, this);
 
             // Save any script-specific data
-            if(StockSession.ScriptInstance != null)
+            if((session != null) && (session.ScriptInstance != null))
             {
-                var saveMethod = StockSession.ScriptInstance.GetStaticMethod("*.Save", s);
+                var saveMethod = session.ScriptInstance.GetStaticMethod("*.Save", s);
                 saveMethod(s);
             }
 

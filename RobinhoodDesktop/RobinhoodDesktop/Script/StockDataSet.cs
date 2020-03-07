@@ -125,6 +125,16 @@ namespace RobinhoodDesktop.Script
         }
 
         /// <summary>
+        /// Limits the specified index to the available data range
+        /// </summary>
+        /// <param name="index">The index to limit</param>
+        /// <returns>The limited index</returns>
+        public virtual int LimitIndex(int index)
+        {
+            return ((index >= 0) ? index : 0);
+        }
+
+        /// <summary>
         /// Returns the time corresponding to the specified data point
         /// </summary>
         /// <param name="i">The data point index</param>
@@ -153,12 +163,13 @@ namespace RobinhoodDesktop.Script
 
         /// <summary>
         /// Loads the data from the source file
+        /// <param name="session">The session currently being processed</param>
         /// </summary>
-        public virtual void Load()
+        public virtual void Load(StockSession session = null)
         {
             if(!IsReady())
             {
-                File.LoadSegment(this);
+                File.LoadSegment(this, session);
             }
         }
 

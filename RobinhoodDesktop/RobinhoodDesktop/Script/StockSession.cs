@@ -40,19 +40,19 @@ namespace RobinhoodDesktop.Script
         /// The data file the source stock data is being pulled from
         /// </summary>
         [NonSerialized]
-        public static StockDataFile SourceFile;
+        public StockDataFile SourceFile;
 
         /// <summary>
         /// The data file representing the analyzed stock data
         /// </summary>
         [NonSerialized]
-        public static StockDataFile SinkFile;
+        public StockDataFile SinkFile;
 
         /// <summary>
         /// The dynamically loaded functionality
         /// </summary>
         [NonSerialized]
-        public static Assembly ScriptInstance;
+        public Assembly ScriptInstance;
         #endregion
 
         public static StockSession Start(List<string> sources, List<string> sinkScripts, string executeScript)
@@ -82,13 +82,14 @@ namespace RobinhoodDesktop.Script
                 foreach(var l in legacyFiles) sources.Remove(l);
             }
 
-            SourceFile = StockDataFile.Open(sources.ConvertAll<Stream>((s) => { return new FileStream(s, FileMode.Open); }));
+            session.SourceFile = StockDataFile.Open(sources.ConvertAll<Stream>((s) => { return new FileStream(s, FileMode.Open); }));
             script.Add("tmp/" + SOURCE_CLASS + ".cs");
-            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SourceFile.GetSourceCode(SOURCE_CLASS));
+            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(session.SourceFile.GetSourceCode(SOURCE_CLASS));
 
-            SinkFile = new StockDataFile(sinkScripts.ConvertAll<string>((f) => { return Path.GetFileNameWithoutExtension(f); }), sinkScripts.ConvertAll<string>((f) => { return File.ReadAllText(f); }));
+            session.SinkFile = new StockDataFile(sinkScripts.ConvertAll<string>((f) => { return Path.GetFileNameWithoutExtension(f); }), sinkScripts.ConvertAll<string>((f) => { return File.ReadAllText(f); }));
+            session.SinkFile.Interval = session.SourceFile.Interval;
             script.Add("tmp/" + SINK_CLASS + ".cs");
-            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SinkFile.GetSourceCode(SINK_CLASS));
+            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(session.SinkFile.GetSourceCode(SINK_CLASS));
 
             // Create the evaluator file (needs to be compiled in the script since it references StockDataSource)
             string[] embeddedFiles = new string[]
@@ -121,20 +122,42 @@ namespace RobinhoodDesktop.Script
             {
                 if(!string.IsNullOrEmpty(executeScript))
                 {
-                    ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
-                    var run = ScriptInstance.GetStaticMethod("*.Run", session);
+                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
+                    var run = session.ScriptInstance.GetStaticMethod("*.Run", session);
                     run(session);
                 }
             }
             catch(Exception ex)
             {
                 System.Windows.Forms.MessageBox.Show(ex.ToString());
+                session.SourceFile.Close();
+                session.SinkFile.Close();
             }
 
-            // Cleanup
-            SourceFile.Close();
-
             return session;
+        }
+
+        /// <summary>
+        /// Creates a chart instance within a data script
+        /// </summary>
+        /// <param name="sources">The data sources to load</param>
+        /// <param name="sinkScripts">The data processors to apply</param>
+        /// <returns></returns>
+        public static System.Windows.Forms.Control AddChart(List<string> sources, List<string> sinkScripts)
+        {
+            System.Windows.Forms.Control ctrl = null;
+            var session = Start(sources, sinkScripts, "Script/ChartScript.cs");
+            try
+            {
+                var createChart = session.ScriptInstance.GetStaticMethod("*.CreateChart", session);
+                ctrl = (System.Windows.Forms.Control)createChart(session);
+            }
+            catch(Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(ex.ToString());
+            }
+
+            return ctrl;
         }
 
         public void Run()

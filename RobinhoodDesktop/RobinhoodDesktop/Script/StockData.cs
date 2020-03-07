@@ -8,5 +8,6 @@ namespace RobinhoodDesktop.Script
 {
     public interface StockData
     {
+        
     }
 }

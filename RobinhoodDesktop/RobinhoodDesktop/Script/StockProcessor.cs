@@ -6,16 +6,27 @@ using System.Threading.Tasks;
 
 namespace RobinhoodDesktop.Script
 {
+    public partial class StockProcessingState
+    {
+        /// <summary>
+        /// The index of the data set that was last processed
+        /// </summary>
+        public int DataSetIndex;
+    }
+
     [Serializable]
     public class StockProcessor
     {
-        public StockProcessor()
+        public StockProcessor(StockSession session)
         {
+            this.Session = session;
+
             // Load the source file static information
-            StockSession.SourceFile.LoadStaticData();
+            Session.SourceFile.LoadStaticData(session);
 
             // Create the derived data set
-            HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.Derive(StockSession.SourceFile.GetSegments<StockDataSource>(), StockSession.SinkFile, createSink);
+            HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.Derive(Session.SourceFile.GetSegments<StockDataSource>(), Session.SinkFile, createSink, getProcessingState);
+            Session.SinkFile.SetSegments<StockDataSink>(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData));
         }
 
         #region Types
@@ -29,7 +40,7 @@ namespace RobinhoodDesktop.Script
             public int ProcessedSetIdx;
             public int ProcessedDataIdx;
             public int ProcessedLiveIdx;
-            
+
             public ProcessingTarget(string symbol, DateTime referenceTime, StockDataSink reference)
             {
                 this.Symbol = symbol;
@@ -115,7 +126,19 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// The thread used to process the live data
         /// </summary>
+        [NonSerialized]
         private System.Threading.Thread LiveThread;
+
+        /// <summary>
+        /// The session this is part of
+        /// </summary>
+        public StockSession Session;
+
+        /// <summary>
+        /// Used to look up the appropriate processing state
+        /// </summary>
+        [NonSerialized]
+        private Dictionary<string, StockProcessingState> ProcessingStates = new Dictionary<string, StockProcessingState>();
         #endregion
 
         /// <summary>
@@ -134,7 +157,6 @@ namespace RobinhoodDesktop.Script
                 {
                     // Process all of the data sets for the target
                     StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> set = sets[target.ProcessedSetIdx];
-                    set.ProcessingState = processingState;
                     set.Load();
                     for(; (target.ProcessedDataIdx < set.Count); target.ProcessedDataIdx++)
                     {
@@ -178,8 +200,8 @@ namespace RobinhoodDesktop.Script
             // If live, set up a subscription
             if(Live && !LiveData.ContainsKey(target.Symbol))
             {
-                var sourceList = new StockDataSet<StockDataSource>(target.Symbol, DateTime.Now, StockSession.SourceFile);
-                var data = new StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>(sourceList, StockSession.SinkFile, createSink);
+                var sourceList = new StockDataSet<StockDataSource>(target.Symbol, DateTime.Now, Session.SourceFile);
+                var data = new StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>(sourceList, Session.SinkFile, createSink, getProcessingState);
                 var sub = DataAccessor.Subscribe(target.Symbol, LiveInterval);
                 sub.Notify += (DataAccessor.Subscription s) =>
                 {
@@ -273,6 +295,35 @@ namespace RobinhoodDesktop.Script
         {
             data.DataSet.InternalArray[idx].Update(data, idx);
         }
+
+        /// <summary>
+        /// Callback used to create a stock data instance
+        /// </summary>
+        private StockProcessingState getProcessingState(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data)
+        {
+            StockProcessingState state;
+            if(!ProcessingStates.TryGetValue(data.Symbol, out state) || (state == null))
+            {
+                state = new StockProcessingState();
+                ProcessingStates[data.Symbol] = state;
+            }
+            else
+            {
+                // Check if processing restarted
+                int index = HistoricalData[data.Symbol].IndexOf(data);
+                if(index < state.DataSetIndex)
+                {
+                    state = new StockProcessingState();
+                    ProcessingStates[data.Symbol] = state;
+                }
+                else
+                {
+                    state.DataSetIndex = index;
+                }
+            }
+            return state;
+        }
         #endregion
     }
 }
+

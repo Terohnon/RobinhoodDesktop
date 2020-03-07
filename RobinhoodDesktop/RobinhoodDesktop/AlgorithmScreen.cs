@@ -20,14 +20,29 @@ namespace RobinhoodDesktop
             public string SourceFiles = "";
 
             /// <summary>
+            /// The most recent path used to open the source files
+            /// </summary>
+            public string SourceFilePath = "";
+
+            /// <summary>
             /// List of scripts that analyze the stock point data
             /// </summary>
             public List<string> DataScripts = new List<string>();
 
             /// <summary>
+            /// The most recent path used to open the data script files
+            /// </summary>
+            public string DataScriptPath = "";
+
+            /// <summary>
             /// The path to the session script to run
             /// </summary>
             public string SessionScript = "";
+
+            /// <summary>
+            /// The most recent path used to open the session script
+            /// </summary>
+            public string SessionScriptPath = "";
         }
 
         public AlgorithmScreen(AlgorithmScreenConfig config = null)
@@ -47,12 +62,14 @@ namespace RobinhoodDesktop
                 System.Windows.Forms.OpenFileDialog diag = new System.Windows.Forms.OpenFileDialog();
                 diag.Multiselect = true;
                 diag.Title = "Open Stock Data File...";
+                diag.InitialDirectory = Cfg.SourceFilePath;
                 if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     if((DataFileTextbox.Text.Length > 0) && (!DataFileTextbox.Text.EndsWith("\n"))) DataFileTextbox.Text += "\r\n";
                     foreach(string dataPath in diag.FileNames)
                     {
                         DataFileTextbox.Text += dataPath + "\r\n";
+                        Cfg.SourceFilePath = Path.GetDirectoryName(dataPath);
                     }
                     DataFileTextbox.Text = DataFileTextbox.Text.Remove(DataFileTextbox.Text.Length - 2, 2);
                     DataFileTextbox.SelectionStart = DataFileTextbox.Text.Length;
@@ -135,12 +152,14 @@ namespace RobinhoodDesktop
                 diag.Filter = "C# Files|*.cs";
                 diag.Title = "Open stock data script(s)...";
                 string prevPath = diag.InitialDirectory;
-                diag.InitialDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\Script\\Data";
+                diag.InitialDirectory = Cfg.DataScriptPath;
                 diag.RestoreDirectory = false;
                 if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     foreach(string scriptPath in diag.FileNames)
                     {
+                        Cfg.DataScriptPath = Path.GetDirectoryName(scriptPath);
+
                         // Skip this item if it has already been loaded
                         var script = scriptPath;
                         if(Cfg.DataScripts.Contains(script)) continue;
@@ -170,9 +189,11 @@ namespace RobinhoodDesktop
                 diag.Multiselect = false;
                 diag.Title = "Open Decision Script File...";
                 diag.Filter = "C# Files|*.cs";
+                diag.InitialDirectory = Cfg.SessionScriptPath;
                 if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     DecisionScriptTextbox.Text = diag.FileName;
+                    diag.InitialDirectory = Path.GetDirectoryName(diag.FileName);
                 }
             };
             DecisionScriptTextbox.Text = Cfg.SessionScript;
@@ -193,7 +214,10 @@ namespace RobinhoodDesktop
             StartButton.Location = new Point(DecisionScriptTextbox.Bounds.Right + 50, DecisionScriptTextbox.Bounds.Top);
             StartButton.MouseUp += (sender, e) =>
             {
-                Script.StockSession.Start(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts, Cfg.SessionScript);
+                var session = Script.StockSession.Start(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts, Cfg.SessionScript);
+                
+                // Cleanup
+                session.SourceFile.Close();
             };
             GuiPanel.Controls.Add(StartButton);
 
@@ -213,6 +237,20 @@ namespace RobinhoodDesktop
                 GuiBox.Size = new Size(GuiPanel.Width - BackButton.Width, 300);
                 GuiBox.Location = new System.Drawing.Point(BackButton.Width + 10, 10);
             };
+
+            // Create a button which adds a chart to the screen
+            ChartButton = new GuiButton("Add Chart");
+            ChartButton.Location = new Point(5, DataFileTextbox.Bottom + 25);
+            ChartButton.MouseUp += (sender, e) =>
+            {
+                var chart = Script.StockSession.AddChart(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts);
+                if(chart != null)
+                {
+                    chart.Location = new Point(ChartButton.Location.X, ChartButton.Bottom + 5);
+                    GuiPanel.Controls.Add(chart);
+                }
+            };
+            GuiPanel.Controls.Add(ChartButton);
         }
 
         #region Variables
@@ -250,6 +288,8 @@ namespace RobinhoodDesktop
         private CustomControls.CustomScrollbar DataScriptListScrollbar;
 
         private TextBox DecisionScriptTextbox;
+
+        private GuiButton ChartButton;
         #endregion
 
         private void RefreshDataListPanel()

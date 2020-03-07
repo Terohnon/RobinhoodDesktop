@@ -15,7 +15,7 @@ namespace RobinhoodDesktop.Script
         public static void Run(StockSession session)
         {
             // Create the stock processor
-            StockProcessor processor = new StockProcessor();
+            StockProcessor processor = new StockProcessor(session);
 
             // Set the change percentages to monitor
             StockDataSink.ChangePercentages = new float[] { -0.025f, -0.05f, -0.10f };
