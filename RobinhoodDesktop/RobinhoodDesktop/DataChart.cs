@@ -229,32 +229,32 @@ namespace RobinhoodDesktop
 
                 public virtual void UpdateDataMinMax(DataTable table)
                 {
-                    const double PWR = 4;
+                    const double PWR = 2;
                     double avg = 0;
                     double stdDev = 0;
+                    double min = double.MaxValue;
+                    double max = double.MinValue;
+                    double dev = 0;
                     int start = Chart.GetDataIndex(Chart.Plot.XAxis1.WorldMin);
                     int end = Chart.GetDataIndex(Chart.Plot.XAxis1.WorldMax);
                     int step = Math.Max((end - start) / 4096, 1);
                     int numSteps = (((end - start) + (step - 1)) / step);
+                    int count = 0;
                     if(numSteps > 0)
                     {
                         // Calculate the average first
                         for(int i = start; i <= end; i += step)
                         {
                             double val = NPlot.Utils.ToDouble(table.Rows[i][Expression]);
-                            avg += val;
+                            if(double.IsNaN(val)) continue;
+                            avg += (val - avg) / ++count;
+                            dev += Math.Pow((val - avg), 2);
+                            min = (val < min) ? val : min;
+                            max = (val > max) ? val : max;
                         }
-                        avg /= numSteps;
-
-                        // Calculate the standard deviation from the average
-                        for(int i = start; i <= end; i += step)
-                        {
-                            double val = NPlot.Utils.ToDouble(table.Rows[i][Expression]);
-                            stdDev += Math.Pow((avg - val), PWR);
-                        }
-                        double range = Math.Pow(stdDev / numSteps, 1 / (PWR - 1)) * 4;
-                        PlotYAxis.WorldMin = avg - range;
-                        PlotYAxis.WorldMax = avg + range;
+                        dev = Math.Sqrt(dev / count);
+                        PlotYAxis.WorldMin = Math.Max(avg - ((avg - min) * 1.1), avg - (dev * 4));
+                        PlotYAxis.WorldMax = Math.Min(avg + ((max - avg) * 1.1), avg + (dev * 4));
                     }
                 }
                 public abstract void SetData(DataTable table);

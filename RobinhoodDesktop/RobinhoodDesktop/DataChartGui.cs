@@ -111,8 +111,7 @@ namespace RobinhoodDesktop
             GuiPanel.Controls.Add(AddPlotButton);
 
             // Add the interactive chart controls
-            Plot.AddInteraction(new PlotDrag(true, false));
-            Plot.AddInteraction(new AxisDrag());
+            Plot.AddInteraction(new PlotDrag(true, true));
             Plot.AddInteraction(new HoverInteraction(this));
 
             var plotCanvas = base.Canvas;
@@ -340,16 +339,29 @@ namespace RobinhoodDesktop
                 if(Hovering && (Chart.Lines.Count > 0))
                 {
                     double percentChange = ((direction > 0) ? (1 / 1.2) : (1.2));
-                    double anchor = Chart.Plot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false);
+                    bool isXAxis = !keys.HasFlag(Modifier.Control);
+                    var physAxis = (isXAxis ? Chart.Plot.PhysicalXAxis1Cache : Chart.Plot.PhysicalYAxis1Cache);
+                    double anchor = physAxis.PhysicalToWorld(new System.Drawing.Point(X, Y), false);
 
-                    double ratio = ((double)X / Chart.Plot.PhysicalXAxis1Cache.PhysicalLength);
-                    if((direction < 0) && (Chart.Plot.XAxis1.WorldMax > NPlot.Utils.ToDouble(Chart.Lines[0].Data.Rows[Chart.Lines[0].Data.Rows.Count - 1][Chart.XAxis])))
+                    if(isXAxis)
                     {
-                        ratio = 1.0;
-                    }
-                    Chart.Plot.XAxis1.IncreaseRange(percentChange - 1.0, ratio);
+                        double ratio = ((double)X / physAxis.PhysicalLength);
+                        if((direction < 0) && (Chart.Plot.XAxis1.WorldMax > NPlot.Utils.ToDouble(Chart.Lines[0].Data.Rows[Chart.Lines[0].Data.Rows.Count - 1][Chart.XAxis])))
+                        {
+                            ratio = 1.0;
+                        }
+                        Chart.Plot.XAxis1.IncreaseRange(percentChange - 1.0, ratio);
 
-                    Chart.UpdateMinMax();
+                        Chart.UpdateMinMax();
+                    }
+                    else
+                    {
+                        double ratio = 1.0 - ((double)Y / physAxis.PhysicalLength);
+                        for(int i = 0; i < Chart.Lines.Count; i++)
+                        {
+                            Chart.Lines[i].Plot.PlotYAxis.IncreaseRange(percentChange - 1.0, ratio);
+                        }
+                    }
                     Chart.Plot.Refresh();
                 }
 
