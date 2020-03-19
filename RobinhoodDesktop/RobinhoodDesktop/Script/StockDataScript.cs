@@ -60,7 +60,7 @@ namespace RobinhoodDesktop.Script
         /// <param name="updateIndex">The index into the data that should be used as the source for this</param>
         public void Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex)
         {
-            this.Price = data.SourceData.DataSet.InternalArray[updateIndex].Price;
+            this.Price = data.SourceData.DataSet.InternalArray[data.GetSourceIndex(updateIndex)].Price;
 
             ///= PartialUpdates ///
         }

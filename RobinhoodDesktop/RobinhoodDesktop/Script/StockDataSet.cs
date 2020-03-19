@@ -87,8 +87,9 @@ namespace RobinhoodDesktop.Script
         {
             get { return Start.AddTicks(Interval.Ticks * DataSet.Count); }
         }
-        public TimeSpan Interval
+        public virtual TimeSpan Interval
         {
+            set {  }
             get { return File.Interval; }
         }
 
@@ -104,6 +105,11 @@ namespace RobinhoodDesktop.Script
         {
             get { return DataSet.InternalArray[DataSet.InternalArray.Count() - 1]; }
         }
+
+        /// <summary>
+        /// The previous data set in the series (allows datasets to reference back across gaps in the time sequence)
+        /// </summary>
+        public StockDataSet<T> Previous;
         #endregion
 
         /// <summary>
@@ -113,15 +119,15 @@ namespace RobinhoodDesktop.Script
         /// <returns>The specified item in the data set</returns>
         public T this[int i]
         {
-            get { return DataSet.InternalArray[i]; }
-        }
-
-        /// <summary>
-        /// Accesses the underlying data point array
-        /// </summary>
-        public T[] Data
-        {
-            get { return DataSet.InternalArray; }
+            get {
+                var set = this;
+                while((i < 0) && (set.Previous != null))
+                {
+                    set = set.Previous;
+                    i += set.Count;
+                }
+                return set.DataSet.InternalArray[(i >= 0) ? i : 0];
+            }
         }
 
         /// <summary>
@@ -131,7 +137,14 @@ namespace RobinhoodDesktop.Script
         /// <returns>The limited index</returns>
         public virtual int LimitIndex(int index)
         {
-            return ((index >= 0) ? index : 0);
+            int minIdx = 0;
+            var prevSet = Previous;
+            while((minIdx > index) && (prevSet != null))
+            {
+                minIdx -= prevSet.Count;
+                prevSet = prevSet.Previous;
+            }
+            return (index >= minIdx) ? index : minIdx;
         }
 
         /// <summary>

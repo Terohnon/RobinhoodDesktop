@@ -362,10 +362,14 @@ namespace RobinhoodDesktop.Script
             Dictionary<string, List<StockDataSet<T>>> dataSets = new Dictionary<string, List<StockDataSet<T>>>();
             foreach(KeyValuePair<string, List<Tuple<DateTime, long>>> pair in Segments)
             {
+                StockDataSet<T> prevSet = null;
                 dataSets[pair.Key] = new List<StockDataSet<T>>();
                 foreach(Tuple<DateTime, long> set in pair.Value)
                 {
-                    dataSets[pair.Key].Add(new StockDataSet<T>(pair.Key, set.Item1, this, set.Item2));
+                    var nextSet = new StockDataSet<T>(pair.Key, set.Item1, this, set.Item2);
+                    nextSet.Previous = prevSet;
+                    prevSet = nextSet;
+                    dataSets[pair.Key].Add(nextSet);
                 }
             }
             return dataSets;
@@ -715,14 +719,17 @@ namespace RobinhoodDesktop.Script
         {
             int count = (s.ReadByte() << 8) | s.ReadByte();
             T[] structs = new T[count];
-            int structSize = Marshal.SizeOf(structs[0]);
-            int size = structSize * count;
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            byte[] data = new byte[size];
-            s.Read(data, 0, size);
-            Marshal.Copy(data, 0, ptr, size);
-            for(int i = 0; i < count; i++) structs[i] = Marshal.PtrToStructure<T>(ptr + (i * structSize));
-            Marshal.FreeHGlobal(ptr);
+            if(count > 0)
+            {
+                int structSize = Marshal.SizeOf(structs[0]);
+                int size = structSize * count;
+                IntPtr ptr = Marshal.AllocHGlobal(size);
+                byte[] data = new byte[size];
+                s.Read(data, 0, size);
+                Marshal.Copy(data, 0, ptr, size);
+                for(int i = 0; i < count; i++) structs[i] = Marshal.PtrToStructure<T>(ptr + (i * structSize));
+                Marshal.FreeHGlobal(ptr);
+            }
 
             return structs;
         }

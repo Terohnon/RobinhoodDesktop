@@ -23,8 +23,11 @@ namespace RobinhoodDesktop
             this.End = File.End;
 
             // Load the dummy data
-            DummyData = DataSets.First().Value[0];
-            DummyData.Load(session);
+            var dummySrc = DataSets.First().Value[0];
+            dummySrc.Load(session);
+            DataSets.First().Value[1].Load(session);    // Work-around so that the processing state is reset if this symbol is loaded again in the future
+            DummyData = new StockDataSet<T>(dummySrc.Symbol, dummySrc.Start, dummySrc.File);
+            DummyData.DataSet.Initialize(dummySrc.DataSet.InternalArray);
 
             // Create the surface used to draw the plot
             Plot = new NPlot.Swf.InteractivePlotSurface2D();
@@ -100,6 +103,11 @@ namespace RobinhoodDesktop
             /// </summary>
             public MethodDelegate GetValue;
 
+            /// <summary>
+            /// Indicates if the plot line is locked and should not be updated with the rest when a global change would take place (ex: setting the symbol)
+            /// </summary>
+            public bool Locked = false;
+
             public PlotLine(DataChart<T> source, string symbol, string expression)
             {
                 this.Symbol = symbol;
@@ -158,25 +166,29 @@ namespace RobinhoodDesktop
                 Data.Columns.Add(source.XAxis, source.getExpressionType(source.XAxis, source.XAxisGetValue));
                 Data.Columns.Add(Expression, source.getExpressionType(Expression, GetValue));
 
-                List<StockDataSet<T>> sources;
-                if(!source.DataSets.TryGetValue(this.Symbol, out sources)) return;
-
-                // Create a table of each data point in the specified range
-                for(int i = 0; i < sources.Count; i++)
+                List<string> symbols = source.GetSymbolList(Symbol);
+                foreach(var s in symbols)
                 {
-                    if(sources[i].Start >= source.Start)
+                    List<StockDataSet<T>> sources;
+                    if(!source.DataSets.TryGetValue(s, out sources)) return;
+
+                    // Create a table of each data point in the specified range
+                    for(int i = 0; i < sources.Count; i++)
                     {
-                        sources[i].Load(source.Session);
-                        for(int j = 0; j < sources[i].Count; j++)
+                        if(sources[i].Start >= source.Start)
                         {
-                            if(sources[i].Time(j) <= source.End)
+                            sources[i].Load(source.Session);
+                            for(int j = 0; j < sources[i].Count; j++)
                             {
-                                // Add the point to the table
-                                Data.Rows.Add(source.XAxisGetValue(sources[i], j), GetValue(sources[i], j));
-                            }
-                            else
-                            {
-                                break;
+                                if(sources[i].Time(j) <= source.End)
+                                {
+                                    // Add the point to the table
+                                    Data.Rows.Add(source.XAxisGetValue(sources[i], j), GetValue(sources[i], j));
+                                }
+                                else
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -229,6 +241,7 @@ namespace RobinhoodDesktop
 
                 public virtual void UpdateDataMinMax(DataTable table)
                 {
+                    if(Chart.Plot.XAxis1 == null) return;
                     const double PWR = 2;
                     double avg = 0;
                     double stdDev = 0;
@@ -541,13 +554,59 @@ namespace RobinhoodDesktop
         /// <param name="symbol">The symbol to set</param>
         protected void SetPlotLineSymbol(string symbol)
         {
-            if(DataSets.Keys.Contains(symbol))
+            foreach(var l in Lines)
             {
-                foreach(var l in Lines)
+                if(!l.Locked) l.Symbol = symbol;
+            }
+        }
+
+        /// <summary>
+        /// Returns a list of symbols based on the expression
+        /// </summary>
+        /// <param name="symbolExpression">The expression defining the symbols</param>
+        /// <returns>A list of stock symbols</returns>
+        public List<string> GetSymbolList(string symbolExpression)
+        {
+            List<string> symbols = symbolExpression.Split(',').ToList();
+            for(int i = 0; i < symbols.Count; i++)
+            {
+                bool remove = symbols[i].Contains('!');
+                if(symbols[i].Contains('-'))
                 {
-                    l.Symbol = symbol;
+                    var exp = symbols[i].Split('-');
+                    symbols.RemoveAt(i);
+                    i--;
+
+                    var rangeSym = DataSets.Keys.Where((s) => { return (s.CompareTo(exp[0]) >= 0) && (s.CompareTo(exp[1]) <= 0); });
+                    if(remove)
+                    {
+                        foreach(var s in rangeSym)
+                        {
+                            var sIdx = symbols.IndexOf(s);
+                            symbols.RemoveAt(sIdx);
+                            if(sIdx <= i) i--;
+                        }
+                    }
+                    else
+                    {
+                        symbols.AddRange(rangeSym);
+                    }
+                    continue;
+                }
+                else
+                {
+                    if(remove)
+                    {
+                        var sIdx = symbols.IndexOf(symbols[i].Replace("!", ""));
+                        symbols.RemoveAt(sIdx);
+                        if(sIdx <= i) i--;
+                        symbols.RemoveAt(i);
+                        i--;
+                    }
                 }
             }
+
+            return symbols;
         }
 
         /// <summary>

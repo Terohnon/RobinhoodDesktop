@@ -41,7 +41,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The button image files
         /// </summary>
-        private static readonly System.Drawing.Image[] ButtonImages = new System.Drawing.Image[] {
+        public static readonly System.Drawing.Image[] ButtonImages = new System.Drawing.Image[] {
             System.Drawing.Bitmap.FromFile("Content/GUI/Button.png"),       // ButtonImage.GREEN_TRANSPARENT
             System.Drawing.Bitmap.FromFile("Content/GUI/Button_White.png"), // ButtonImage.GREEN_WHITE
         };

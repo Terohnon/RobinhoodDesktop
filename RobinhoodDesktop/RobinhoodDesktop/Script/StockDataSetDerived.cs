@@ -33,10 +33,14 @@ namespace RobinhoodDesktop.Script
             var derived = new Dictionary<string, List<StockDataSetDerived<T, U, V>>>();
             foreach(KeyValuePair<string, List<StockDataSet<U>>> pair in source)
             {
+                StockDataSetDerived<T, U, V> prevSet = null;
                 derived[pair.Key] = new List<StockDataSetDerived<T, U, V>>(pair.Value.Count);
                 foreach(StockDataSet<U> srcSet in pair.Value)
                 {
-                    derived[pair.Key].Add(new StockDataSetDerived<T, U, V>(srcSet, file, create, stateGetter));
+                    var newSet = new StockDataSetDerived<T, U, V>(srcSet, file, create, stateGetter);
+                    newSet.Previous = prevSet;
+                    prevSet = newSet;
+                    derived[pair.Key].Add(newSet);
                 }
             }
 
@@ -79,6 +83,22 @@ namespace RobinhoodDesktop.Script
         /// Gets the processing state to use
         /// </summary>
         StockProcessingStateAccessor GetState;
+
+        /// <summary>
+        /// The interval between ticks. Can be overridden to set a decrased interval from the base data set.
+        /// </summary>
+        public override TimeSpan Interval
+        {
+            set {
+                _interval = value;
+                if(DataSet.Count > 0)
+                {
+                    DataSet.Clear();
+                }
+            }
+            get { return (_interval != TimeSpan.Zero) ? _interval : File.Interval; }
+        }
+        private TimeSpan _interval = TimeSpan.Zero;
         #endregion
 
         #region Types
@@ -102,9 +122,10 @@ namespace RobinhoodDesktop.Script
             if(!IsReady())
             {
                 SourceData.Load(session);
-                DataSet.Resize(SourceData.DataSet.Count);
+                int endIdx = (int)((SourceData.DataSet.Count * SourceData.Interval.Ticks) / Interval.Ticks);
+                DataSet.Resize(endIdx);
                 ProcessingState = GetState(this);
-                for(int idx = DataSet.Count; idx < SourceData.DataSet.Count; idx++)
+                for(int idx = DataSet.Count; idx < endIdx; idx++)
                 {
                     Create(this, idx);
                 }
@@ -135,7 +156,7 @@ namespace RobinhoodDesktop.Script
         /// <returns>True if the DataSet contains all available data</returns>
         public override bool IsReady()
         {
-            return SourceData.IsReady() && (SourceData.DataSet.Count == DataSet.Count);
+            return SourceData.IsReady() && (SourceData.DataSet.Count == GetSourceIndex(DataSet.Count));
         }
 
         /// <summary>
@@ -147,6 +168,21 @@ namespace RobinhoodDesktop.Script
             SourceData.DataSet.Add(source);
             DataSet.Add(new T());
             Create(this, SourceData.DataSet.Count - 1);
+        }
+
+        /// <summary>
+        /// Calculates the source index corresponding to the specified derived index
+        /// </summary>
+        /// <param name="index">The index into the derived data set</param>
+        /// <returns>The corresponding source data set index (will match if the interval is the same)</returns>
+        public int GetSourceIndex(int index)
+        {
+            int srcIndex = index;
+            if(Interval != SourceData.Interval)
+            {
+                srcIndex = (int)((Interval.Ticks * index) / SourceData.Interval.Ticks);
+            }
+            return srcIndex;
         }
     }
 }

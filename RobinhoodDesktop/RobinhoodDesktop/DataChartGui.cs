@@ -24,6 +24,12 @@ namespace RobinhoodDesktop
             {
                 GuiPanel.Size = new System.Drawing.Size(GuiPanel.Parent.Width - 50, GuiPanel.Height);
                 SymbolTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), 5);
+                int intervalBtnPos = SymbolTextbox.Right + 5;
+                foreach(var pair in IntervalButtons)
+                {
+                    pair.Item1.Location = new Point(intervalBtnPos, SymbolTextbox.Top);
+                    intervalBtnPos = pair.Item1.Right + 5;
+                }
                 XAxisTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), GuiPanel.Height - XAxisTextbox.Height - 10);
             };
             GuiPanel.ParentChanged += (sender, e) =>
@@ -55,6 +61,7 @@ namespace RobinhoodDesktop
                 if(eventArgs.KeyCode == Keys.Enter)
                 {
                     SetPlotLineSymbol(SymbolTextbox.Text);
+                    SetSymbolInterval();
                     this.Refresh();
                 }
             };
@@ -142,6 +149,26 @@ namespace RobinhoodDesktop
             GuiPanel.Controls.Add(ErrorMessageLabel);
             ErrorMessageLabel.BringToFront();
 
+            foreach(var pair in IntervalButtons)
+            {
+                pair.Item1.SetImage(GuiButton.ButtonImage.GREEN_TRANSPARENT);
+                pair.Item1.Click += (sender, e) =>
+                {
+                    // Update the selected button (first)
+                    foreach(var p in IntervalButtons)
+                    {
+                        p.Item1.SetImage(GuiButton.ButtonImage.GREEN_TRANSPARENT);
+                    }
+                    pair.Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
+
+                    // Set the new interval
+                    SetSymbolInterval();
+                    Refresh();
+                };
+                GuiPanel.Controls.Add(pair.Item1);
+            }
+            IntervalButtons[0].Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
+
             // Start with one line
             AddPlotLine();
         }
@@ -190,6 +217,18 @@ namespace RobinhoodDesktop
         /// The list of labels corresponding to the plot lines
         /// </summary>
         private List<Label> PlotLineLabels = new List<Label>();
+
+        /// <summary>
+        /// Contains the buttons used to select the desired data interval
+        /// </summary>
+        private List<Tuple<GuiButton, TimeSpan>> IntervalButtons = new List<Tuple<GuiButton, TimeSpan>>()
+        {
+            { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 min."), new TimeSpan(0, 1, 0)) },
+            { new Tuple<GuiButton, TimeSpan>(new GuiButton("5 min."), new TimeSpan(0, 5, 0)) },
+            { new Tuple<GuiButton, TimeSpan>(new GuiButton("10 min."), new TimeSpan(0, 10, 0)) },
+            { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 hr."), new TimeSpan(1, 0, 0)) },
+            { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 day."), new TimeSpan(24, 0, 0)) },
+        };
         #endregion
 
         #region Types
@@ -416,7 +455,10 @@ namespace RobinhoodDesktop
         /// <returns>A list of strings matching the search pattern</returns>
         private string[] SuggestSymbols(string search)
         {
-            return DataSets.Keys.Where((s) => { return s.StartsWith(search); }).ToArray();
+            var lastSeparator = search.LastIndexOfAny(new char[] { ',', '-', '!' }) + 1;
+            var symSearch = search.Substring(lastSeparator);
+            var symList = search.Substring(0, lastSeparator);
+            return DataSets.Keys.Where((s) => { return s.StartsWith(symSearch); }).ToList().ConvertAll((s) => { return symList + s; }).ToArray();
         }
 
         /// <summary>
@@ -444,6 +486,26 @@ namespace RobinhoodDesktop
                 PlotLineTextboxes[i].Location = new System.Drawing.Point(5, SymbolTextbox.Bottom + 5 + (spacing * i));
             }
             AddPlotButton.Location = new System.Drawing.Point(5, SymbolTextbox.Bottom + 5 + (spacing * PlotLineTextboxes.Count));
+        }
+
+        /// <summary>
+        /// Updates the interval for the current symbol
+        /// </summary>
+        private void SetSymbolInterval()
+        {
+            TimeSpan span = IntervalButtons.Where((i) => { return i.Item1.Image == GuiButton.ButtonImages[(int)GuiButton.ButtonImage.GREEN_WHITE]; }).First().Item2;
+            List<StockDataSet<T>> symbolDataSets;
+            List<string> symbols = GetSymbolList(SymbolTextbox.Text);
+            foreach(var symbol in symbols)
+            {
+                if(DataSets.TryGetValue(symbol, out symbolDataSets))
+                {
+                    foreach(var s in symbolDataSets)
+                    {
+                        s.Interval = span;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -507,11 +569,44 @@ namespace RobinhoodDesktop
                     plotTextbox.AutoCompleteCustomSource = collection;
                 }
             };
-            plotTextbox.ColorPanel.Click += (sender, e) => {
-                plot.Color = PlotLineColors.Dequeue();
-                PlotLineColors.Enqueue(plot.Color);   // Add the color to the end of the list so that it can be re-used if needed
-                plotTextbox.BorderColor = plot.Color;
+            plotTextbox.ColorPanel.MouseClick += (sender, e) => {
+                if(e.Button == MouseButtons.Left)
+                {
+                    // Cycle to the next color
+                    PlotLineColors.Enqueue(plot.Color); // Add the previous plot color to the list so it can be re-used
+                    plot.Color = PlotLineColors.Dequeue();
+                    PlotLineColors.Enqueue(plot.Color);   // Add the color to the end of the list so that it can be re-used if needed
+                    plotTextbox.BorderColor = plot.Color;
+                    plot.Locked = false;
+                    plotTextbox.ColorPanel.BorderStyle = BorderStyle.None;
+                }
+                else if(e.Button == MouseButtons.Right)
+                {
+                    // Cycle through transparency
+                    byte[] alphaLevels = { 255, 128, 64, 16 };
+                    for(int i = 0; i < alphaLevels.Length; i++)
+                    {
+                        if(alphaLevels[i] == plot.Color.A)
+                        {
+                            i = (i + 1) % alphaLevels.Length;
+                            plot.Color = Color.FromArgb(alphaLevels[i], plot.Color);
+                            break;
+                        }
+                    }
+                }
                 Plot.Refresh();
+            };
+            plotTextbox.ColorPanel.MouseDoubleClick += (sender, e) =>
+            {
+                if(e.Button == MouseButtons.Left)
+                {
+                    // Restore the previous color
+                    plot.Color = PlotLineColors.ElementAt(PlotLineColors.Count - 2);
+                    plotTextbox.BorderColor = plot.Color;
+                    plot.Locked = true;
+                    plotTextbox.ColorPanel.BorderStyle = BorderStyle.FixedSingle;
+                    Plot.Refresh();
+                }
             };
             this.PlotLineTextboxes.Add(plotTextbox);
             this.GuiPanel.Controls.Add(plotTextbox);

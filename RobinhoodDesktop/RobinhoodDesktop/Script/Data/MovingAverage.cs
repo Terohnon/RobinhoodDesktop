@@ -24,7 +24,7 @@ namespace RobinhoodDesktop.Script
             int startIdx = Math.Max(0, updateIndex - 9);
             for(int idx = startIdx; idx <= updateIndex; idx++)
             {
-                this.Average10Min += data.DataSet.InternalArray[idx].Price;
+                this.Average10Min += data[idx].Price;
             }
             this.Average10Min /= ((updateIndex + 1) - startIdx);
         }
