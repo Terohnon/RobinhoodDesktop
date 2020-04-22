@@ -639,8 +639,7 @@ namespace RobinhoodDesktop.Script
                 DateTime lineTime = fileStart;
                 while(!s.EndOfStream && (lineTime < fileEnd))
                 {
-                    line = s.ReadLine();
-                    string[] stockPricesStr = line.Split(new char[] { ',' });
+                    string[] stockPricesStr = s.ReadLine().Split(new char[] { ',' });
 
                     // Ensure the entry contains all of the stocks
                     if((stockPricesStr.Length - 1) != fileData.Count)
@@ -649,7 +648,8 @@ namespace RobinhoodDesktop.Script
                     }
 
                     // Get the time of the entry
-                    DateTime newTime = DateTime.Parse(stockPricesStr[0].Replace("\"", ""));
+                    DateTime newTime;
+                    if(!DateTime.TryParse(stockPricesStr[0].Replace("\"", ""), out newTime)) continue;
                     newTime = fileStart.AddTicks((newTime.TimeOfDay.Ticks - fileStart.TimeOfDay.Ticks) - delayedOffset);
 
                     // Check if this new entry is valid

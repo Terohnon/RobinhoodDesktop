@@ -217,7 +217,7 @@ namespace RobinhoodDesktop
                 var session = Script.StockSession.Start(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts, Cfg.SessionScript);
                 
                 // Cleanup
-                session.SourceFile.Close();
+                if(session != null) session.SourceFile.Close();
             };
             GuiPanel.Controls.Add(StartButton);
 

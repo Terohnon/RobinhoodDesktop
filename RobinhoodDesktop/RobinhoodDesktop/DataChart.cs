@@ -209,7 +209,7 @@ namespace RobinhoodDesktop
             public string PrintValue(int dataIndex)
             {
                 string val = "";
-                if(Data.Columns.Contains(Expression))
+                if(Data.Columns.Contains(Expression) && (Data.Rows.Count > 0))
                 {
                     val = NPlot.Utils.ToDouble(Data.Rows[dataIndex][Expression]).ToString();
                 }
