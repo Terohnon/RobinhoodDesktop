@@ -26,7 +26,8 @@ namespace RobinhoodDesktop.Script
 
             // Create the derived data set
             HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.Derive(Session.SourceFile.GetSegments<StockDataSource>(), Session.SinkFile, createSink, getProcessingState);
-            Session.SinkFile.SetSegments<StockDataSink>(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData));
+            DerivedData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData);
+            Session.SinkFile.SetSegments<StockDataSink>(DerivedData);
         }
 
         #region Types
@@ -86,6 +87,12 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         [NonSerialized]
         public Dictionary<string, List<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>>> HistoricalData;
+
+        /// <summary>
+        /// The historical data, cast to a simple data set container
+        /// </summary>
+        [NonSerialized]
+        public Dictionary<string, List<StockDataSet<StockDataSink>>> DerivedData;
 
         /// <summary>
         /// Indicates if the processor should operate on live data
@@ -326,4 +333,3 @@ namespace RobinhoodDesktop.Script
         #endregion
     }
 }
-

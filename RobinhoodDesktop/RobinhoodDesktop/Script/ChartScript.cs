@@ -26,7 +26,7 @@ namespace RobinhoodDesktop.Script
         public static Control CreateChart(StockSession session)
         {
             StockProcessor processor = new StockProcessor(session);
-            return (Control)(new DataChartGui<StockDataSink>(session.SinkFile)).GuiPanel;
+            return (Control)(new DataChartGui<StockDataSink>(processor.DerivedData, session.SinkFile, session)).GuiPanel;
         }
     }
 }
