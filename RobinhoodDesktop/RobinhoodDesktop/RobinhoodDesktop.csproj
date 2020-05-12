@@ -259,6 +259,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="NPlot\NPlot\NPlot\NPlot.csproj">
+      <Project>{E4B99177-77A3-4C92-B881-A6CB57E3BF89}</Project>
+      <Name>NPlot</Name>
+    </ProjectReference>
     <ProjectReference Include="RobinhoodNet\RobinhoodNet\RobinhoodNet.csproj">
       <Project>{4E7B4836-04A8-47FD-A634-3F99CF388977}</Project>
       <Name>RobinhoodNet</Name>
