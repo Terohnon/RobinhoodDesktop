@@ -5,6 +5,7 @@ using System.Data;
 using System.Text;
 using System.Threading;
 using BasicallyMe.RobinhoodNet;
+using BasicallyMe.RobinhoodNet.DataTypes;
 
 namespace RobinhoodDesktop
 {
@@ -407,6 +408,12 @@ namespace RobinhoodDesktop
         #endregion
 
         #region Broker
+
+        public string GenerateDeviceToken()
+        {
+            return Client.GenerateDeviceToken();
+        }
+
         /// <summary>
         /// Indicates if the interface is currently logged in to an account
         /// </summary>
@@ -421,10 +428,10 @@ namespace RobinhoodDesktop
         /// </summary>
         /// <param name="username">The account username (email address)</param>
         /// <param name="password">The account password</param>
-        public void SignIn(string username, string password)
+        public (bool, ChallengeInfo) SignIn(string username, string password, string deviceToken, string challengeID)
         {
             this.UserName = username;
-            Client.Authenticate(username, password);
+            return Client.Authenticate(username, password, deviceToken, challengeID);
         }
 
         /// <summary>
@@ -434,6 +441,11 @@ namespace RobinhoodDesktop
         public void SignIn(string token)
         {
             Client.Authenticate(token);
+        }
+
+        public (bool, ChallengeInfo) ChallengeResponse(string id, string id_code)
+        {
+            return Client.ChallengeResponse(id, id_code);
         }
 
         /// <summary>
@@ -776,7 +788,10 @@ namespace RobinhoodDesktop
                 }
 
                 // Update the active orders
-                RefreshActiveOrders();
+                if (Client.isAuthenticated)
+                {
+                    RefreshActiveOrders();
+                }
 
                 // Sleep so the thread doesn't run at 100% CPU
                 System.Threading.Thread.Sleep(5);
