@@ -36,13 +36,12 @@ namespace RobinhoodDesktop.Script
                 numFeatures = 0;
 
                 StockDataSink s = src[srcIdx];
-                dst[dstIdx, numFeatures++] = s.Trend;
+                dst[dstIdx, numFeatures++] = s.Average10Min;
 
-                // Output the labels for the data point
+                // Output the labels for the data point - the thing you are trying to predict
                 numLabels = 0;
 
-                var timeDays = (s.ChangeTimes[0].TotalHours / 6.5);
-                labels[dstIdx, numLabels++] = ((timeDays > 0) && (timeDays < 12)) ? 1 : 0;
+                labels[dstIdx, numLabels++] = ((s.Price > s.Average10Min) ? 1 : 0);
             }
         }
 
