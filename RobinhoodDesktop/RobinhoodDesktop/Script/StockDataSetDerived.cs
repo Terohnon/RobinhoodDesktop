@@ -54,7 +54,7 @@ namespace RobinhoodDesktop.Script
         /// <typeparam name="U">The base data point type</typeparam>
         /// <typeparam name="V">The processing state type</typeparam>
         /// <param name="segments">The set of segments to specify for this file</param>
-        public static Dictionary<string, List<StockDataSet<T>>> CastToBase<T, U, V>(Dictionary<string, List<StockDataSetDerived<T, U, V>>> segments) where T : struct, StockData where U : struct, StockData
+        public static Dictionary<string, List<StockDataSet<T>>> CastToBase(Dictionary<string, List<StockDataSetDerived<T, U, V>>> segments)
         {
             Dictionary<string, List<StockDataSet<T>>> castedSeg = segments.Cast<KeyValuePair<string, List<StockDataSetDerived<T, U, V>>>>().ToDictionary(
                 (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return (string)pair.Key; },

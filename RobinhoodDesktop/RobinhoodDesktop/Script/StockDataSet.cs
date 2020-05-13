@@ -178,7 +178,7 @@ namespace RobinhoodDesktop.Script
         /// Loads the data from the source file
         /// <param name="session">The session currently being processed</param>
         /// </summary>
-        public virtual void Load(StockSession session = null)
+        public virtual void Load(StockSession session)
         {
             if(!IsReady())
             {

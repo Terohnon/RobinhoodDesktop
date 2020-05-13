@@ -122,7 +122,7 @@ namespace RobinhoodDesktop.Script
             {
                 if(!string.IsNullOrEmpty(executeScript))
                 {
-                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
+                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug, "TensorFlow.NET.dll", "Google.Protobuf.dll", "netstandard", "System.Memory");
                     var run = session.ScriptInstance.GetStaticMethod("*.Run", session);
                     run(session);
                 }
