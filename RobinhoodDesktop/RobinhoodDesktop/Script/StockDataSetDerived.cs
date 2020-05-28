@@ -110,14 +110,14 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Callback used to create a stock data instance
         /// </summary>
-        public delegate V StockProcessingStateAccessor(StockDataSetDerived<T, U, V> data);
+        public delegate V StockProcessingStateAccessor(StockDataSetInterface data);
         #endregion
 
         /// <summary>
         /// Loads the data from the source file
         /// <param name="session">The session currently being processed</param>
         /// </summary>
-        public override void Load(StockSession session = null)
+        public override void Load(StockSession session)
         {
             if(!IsReady())
             {
@@ -143,11 +143,15 @@ namespace RobinhoodDesktop.Script
 
         /// <summary>
         /// Clears both the source and the derived data
+        /// <param name="keep">Indicates which data should be kept</param>
         /// </summary>
-        public override void Clear()
+        public override void Clear(MemoryScheme keep = MemoryScheme.MEM_KEEP_NONE)
         {
-            base.Clear();
-            SourceData.Clear();
+            if(keep != MemoryScheme.MEM_KEEP_DERIVED)
+            {
+                base.Clear();
+            }
+            SourceData.Clear(keep);
         }
 
         /// <summary>
@@ -183,6 +187,15 @@ namespace RobinhoodDesktop.Script
                 srcIndex = (int)((Interval.Ticks * index) / SourceData.Interval.Ticks);
             }
             return srcIndex;
+        }
+
+        /// <summary>
+        /// Returns the number of points in the source data set
+        /// </summary>
+        /// <returns>The number of data points</returns>
+        public override int GetSourceCount()
+        {
+            return SourceData.GetSourceCount();
         }
     }
 }

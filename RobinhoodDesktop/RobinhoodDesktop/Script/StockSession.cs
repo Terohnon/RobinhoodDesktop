@@ -7,9 +7,21 @@ using System.IO;
 using System.Reflection;
 
 using CSScriptLibrary;
+using System.Windows.Controls;
 
 namespace RobinhoodDesktop.Script
 {
+    /// <summary>
+    /// Specifies the options for keeping processed data in memory. Ideally all processed data would be kept,
+    /// but if there is not enough memory for that then some may be discarded once processing has completed.
+    /// </summary>
+    public enum MemoryScheme
+    {
+        MEM_KEEP_NONE,
+        MEM_KEEP_SOURCE,
+        MEM_KEEP_DERIVED
+    }
+
     [Serializable]
     public class StockSession
     {
@@ -53,6 +65,13 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         [NonSerialized]
         public Assembly ScriptInstance;
+
+        /// <summary>
+        /// Callback that can be used to add an element to the GUI
+        /// </summary>
+        [NonSerialized]
+        public static AddGuiFunc AddToGui = null;
+        public delegate void AddGuiFunc(System.Windows.Forms.Control c);
         #endregion
 
         public static StockSession Start(List<string> sources, List<string> sinkScripts, string executeScript)
@@ -122,7 +141,7 @@ namespace RobinhoodDesktop.Script
             {
                 if(!string.IsNullOrEmpty(executeScript))
                 {
-                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug, "TensorFlow.NET.dll", "Google.Protobuf.dll", "netstandard", "System.Memory");
+                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug, "TensorFlow.NET.dll", "Google.Protobuf.dll", "NumSharp.Lite", "netstandard", "System.Memory", "System.Numerics");
                     var run = session.ScriptInstance.GetStaticMethod("*.Run", session);
                     run(session);
                 }
@@ -142,22 +161,22 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="sources">The data sources to load</param>
         /// <param name="sinkScripts">The data processors to apply</param>
-        /// <returns></returns>
-        public static System.Windows.Forms.Control AddChart(List<string> sources, List<string> sinkScripts)
+        public static void AddChart(List<string> sources, List<string> sinkScripts)
         {
-            System.Windows.Forms.Control ctrl = null;
             var session = Start(sources, sinkScripts, "Script/ChartScript.cs");
             try
             {
                 var createChart = session.ScriptInstance.GetStaticMethod("*.CreateChart", session);
-                ctrl = (System.Windows.Forms.Control)createChart(session);
+                var ctrl = (System.Windows.Forms.Control)createChart(session);
+                if((ctrl != null) && (AddToGui != null))
+                {
+                    AddToGui(ctrl);
+                }
             }
             catch(Exception ex)
             {
                 System.Windows.Forms.MessageBox.Show(ex.ToString());
             }
-
-            return ctrl;
         }
 
         public void Run()

@@ -238,17 +238,22 @@ namespace RobinhoodDesktop
                 GuiBox.Location = new System.Drawing.Point(BackButton.Width + 10, 10);
             };
 
+            // Specify the interface that should be used to add a chart to the screen
+            Script.StockSession.AddToGui += (control) =>
+            {
+                if (control != null)
+                {
+                    control.Location = new Point(ChartButton.Location.X, ChartButton.Bottom + 5);
+                    GuiPanel.Controls.Add(control);
+                }
+            };
+
             // Create a button which adds a chart to the screen
             ChartButton = new GuiButton("Add Chart");
             ChartButton.Location = new Point(5, DataFileTextbox.Bottom + 25);
             ChartButton.MouseUp += (sender, e) =>
             {
-                var chart = Script.StockSession.AddChart(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts);
-                if(chart != null)
-                {
-                    chart.Location = new Point(ChartButton.Location.X, ChartButton.Bottom + 5);
-                    GuiPanel.Controls.Add(chart);
-                }
+                Script.StockSession.AddChart(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts);
             };
             GuiPanel.Controls.Add(ChartButton);
         }

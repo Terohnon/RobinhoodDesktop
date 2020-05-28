@@ -257,6 +257,26 @@ namespace RobinhoodDesktop.Script
             }
 
             /// <summary>
+            /// Returns the number of data points in the given segment
+            /// </summary>
+            /// <typeparam name="T">The data point type</typeparam>
+            /// <param name="segment">The segment to check</param>
+            /// <returns>The number of data points in the segment when it is loaded</returns>
+            public override int GetSegmentSize<T>(StockDataSet<T> segment)
+            {
+                int count = 0;
+                for(int s = 0; s < Sources.Count; s++)
+                {
+                    if((Sources[s].Start <= segment.Start) && (Sources[s].End > segment.Start))
+                    {
+                        count = Sources[s].GetSegmentSize<T>(segment);
+                        break;
+                    }
+                }
+                return count;
+            }
+
+            /// <summary>
             /// Generates the source code for the agregator
             /// </summary>
             /// <param name="members">The list of members that should be present in the agregator</param>
@@ -407,8 +427,25 @@ namespace RobinhoodDesktop.Script
         public virtual void LoadSegment<T>(StockDataSet<T> segment, StockSession session = null) where T : struct, StockData
         {
             FileMutex.WaitOne();
-            segment.DataSet.Initialize(LoadData<T>(segment.Symbol, segment.Start));
+            segment.DataSet.Initialize(LoadData<T>(segment.StreamAddress));
             FileMutex.ReleaseMutex();
+        }
+
+        /// <summary>
+        /// Utility to load an array of data points from the file
+        /// </summary>
+        /// <typeparam name="T">The data point type</typeparam>
+        /// <param name="address">The address in the file stream where the item is located</param>
+        /// <returns>An array of loaded data points</returns>
+        public T[] LoadData<T>(long address) where T : struct, StockData
+        {
+            T[] data = null;
+
+            File.Seek(address, SeekOrigin.Begin);
+            data = Load<T>(File);
+
+            if(data == null) data = new T[0];
+            return data;
         }
 
         /// <summary>
@@ -425,14 +462,34 @@ namespace RobinhoodDesktop.Script
             {
                 if(t.Item1 == start)
                 {
-                    File.Seek(t.Item2, SeekOrigin.Begin);
-                    data = Load<T>(File);
+                    data = LoadData<T>(t.Item2);
                     break;
                 }
             }
 
             if(data == null) data = new T[0];
             return data;
+        }
+
+        /// <summary>
+        /// Returns the number of data points in the given segment
+        /// </summary>
+        /// <typeparam name="T">The data point type</typeparam>
+        /// <param name="segment">The segment to check</param>
+        /// <returns>The number of data points in the segment when it is loaded</returns>
+        public virtual int GetSegmentSize<T>(StockDataSet<T> segment) where T : struct, StockData
+        {
+            int count = 0;
+            foreach(Tuple<DateTime, long> t in this.Segments[segment.Symbol])
+            {
+                if(t.Item1 == segment.Start)
+                {
+                    File.Seek(t.Item2, SeekOrigin.Begin);
+                    count = (File.ReadByte() << 8) | File.ReadByte();
+                    break;
+                }
+            }
+            return count;
         }
 
         /// <summary>

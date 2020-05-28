@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props" Condition="Exists('..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props')" />
-  <Import Project="..\packages\SciSharp.TensorFlow.Redist.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist.props" Condition="Exists('..\packages\SciSharp.TensorFlow.Redist.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -206,6 +205,7 @@
     </Compile>
     <Compile Include="LogInScreen.cs" />
     <Compile Include="MachineLearning\StockML.cs" />
+    <Compile Include="MachineLearning\StockMLData.cs" />
     <Compile Include="MenuBar.cs" />
     <Compile Include="RobinhoodInterface.cs" />
     <Compile Include="Scripting.evaluator.cs" />
@@ -361,7 +361,6 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\SciSharp.TensorFlow.Redist.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SciSharp.TensorFlow.Redist.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist.props'))" />
     <Error Condition="!Exists('..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props'))" />
   </Target>
 </Project>

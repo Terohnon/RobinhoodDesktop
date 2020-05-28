@@ -7,7 +7,18 @@ using System.IO;
 
 namespace RobinhoodDesktop.Script
 {
-    public class StockDataSet<T> where T : struct, StockData
+    public interface StockDataSetInterface
+    {
+        /// <summary>
+        /// Outputs information about the data set
+        /// </summary>
+        /// <param name="symbol">The stock symbol the dataset is for</param>
+        /// <param name="start">The start time of the dataset</param>
+        /// <param name="interval">The interval between data points in the set</param>
+        void GetInfo(out string symbol, out DateTime start, out TimeSpan interval);
+    }
+
+    public class StockDataSet<T> : StockDataSetInterface where T : struct, StockData
     {
         public StockDataSet(string symbol, DateTime start, StockDataFile file, long address = -1)
         {
@@ -110,6 +121,19 @@ namespace RobinhoodDesktop.Script
         /// The previous data set in the series (allows datasets to reference back across gaps in the time sequence)
         /// </summary>
         public StockDataSet<T> Previous;
+
+        /// <summary>
+        /// Outputs information about the data set
+        /// </summary>
+        /// <param name="symbol">The stock symbol the dataset is for</param>
+        /// <param name="start">The start time of the dataset</param>
+        /// <param name="interval">The interval between data points in the set</param>
+        public void GetInfo(out string symbol, out DateTime start, out TimeSpan interval)
+        {
+            symbol = this.Symbol;
+            start = this.Start;
+            interval = this.Interval;
+        }
         #endregion
 
         /// <summary>
@@ -189,9 +213,21 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Releases the reference to the data to free up memory
         /// </summary>
-        public virtual void Clear()
+        public virtual void Clear(MemoryScheme keep = MemoryScheme.MEM_KEEP_NONE)
         {
-            this.DataSet.Clear();
+            if(keep == MemoryScheme.MEM_KEEP_NONE)
+            {
+                this.DataSet.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Returns the number of points in the source data set
+        /// </summary>
+        /// <returns>The number of data points</returns>
+        public virtual int GetSourceCount()
+        {
+            return File.GetSegmentSize(this);
         }
     }
 }
