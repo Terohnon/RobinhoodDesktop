@@ -182,7 +182,7 @@ namespace RobinhoodDesktop
                 foreach(var s in symbols)
                 {
                     List<StockDataSet<T>> sources;
-                    if(!source.DataSets.TryGetValue(s, out sources)) break;
+                    if(!source.DataSets.TryGetValue(s, out sources) || (GetValue == null)) break;
 
                     // Create a table of each data point in the specified range
                     for(int i = 0; i < sources.Count; i++)

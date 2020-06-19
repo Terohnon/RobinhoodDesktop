@@ -136,6 +136,77 @@ namespace RobinhoodDesktop.MachineLearning
         }
 
         /// <summary>
+        /// Default method to build a fully-connected graph of the specified structure
+        /// </summary>
+        /// <param name="layerNodes">The number of nodes to have at each layer. Index [0] is the number of inputs, and [lenth - 1] is the number of outputs.</param>
+        /// <returns></returns>
+        public virtual Graph BuildFullyConnectedGraphFloat(int[] layerNodes, float learningRate = 0.01f)
+        {
+            tf.enable_eager_execution();
+            var g = tf.get_default_graph();
+
+            tf_with(tf.name_scope("Input"), delegate
+            {
+                Input = tf.placeholder(tf.float32, shape: new TensorShape(-1, layerNodes[0]));
+                YTrue = tf.placeholder(tf.float32, shape: new TensorShape(-1, layerNodes[layerNodes.Length - 1]));
+            });
+
+            tf_with(tf.variable_scope("FullyConnected"), delegate
+            {
+                Tensor x = Input;
+                Tensor y = null;
+
+                for (int i = 1; i < (layerNodes.Length - 1); i++)
+                {
+                    var w = tf.get_variable("w" + i, shape: new TensorShape(layerNodes[i - 1], layerNodes[i]), initializer: tf.random_normal_initializer(stddev: 0.1f));
+                    var b = tf.get_variable("b" + i, shape: new TensorShape(layerNodes[i]), initializer: tf.constant_initializer(0.1));
+                    Prediction = tf.matmul(x, w) + b;
+                    y = tf.nn.relu(Prediction);
+                    x = y;
+                }
+
+                var w2 = tf.get_variable("w_out", shape: new TensorShape(layerNodes[layerNodes.Length - 2], layerNodes[layerNodes.Length - 1]), initializer: tf.random_normal_initializer(stddev: 0.1f));
+                var b2 = tf.get_variable("b_out", shape: new TensorShape(layerNodes[layerNodes.Length - 1]), initializer: tf.constant_initializer(0.1));
+                Prediction = tf.matmul(y, w2) + b2;
+            });
+
+            tf_with(tf.variable_scope("Loss"), delegate
+            {
+                var lossVal = (Prediction - YTrue);
+                var scaler = (YTrue - Prediction);
+                var correct = tf.cast(tf.logical_and((YTrue < 10), (Prediction < 10)), TF_DataType.TF_FLOAT);
+                //LossFunc = tf.reduce_mean((lossVal * 0.01 * correct) + (lossVal * tf.maximum((10 - Prediction), 1) * (1 - correct)));
+                var mean = tf.reduce_mean(lossVal);
+                var std = tf.sqrt(tf.reduce_mean(tf.square(Prediction - mean)));
+
+                //LossFunc = (tf.reduce_mean(scaler));
+                //LossFunc = tf.reduce_mean(Prediction + tf.maximum(YTrue - Prediction, 0));
+                //LossFunc = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(YTrue, Prediction));
+                LossFunc = tf.reduce_mean(tf.abs(Prediction - YTrue));
+            });
+
+            tf_with(tf.variable_scope("Accuracy"), delegate
+            {
+                Accuracy = tf.reduce_mean(tf.abs(tf.sub(Prediction, YTrue)));
+            });
+
+            // We add the training operation, ...
+            var adam = tf.train.AdamOptimizer(learningRate);   // Set the learning rate here
+            TrainOp = adam.minimize(LossFunc, name: "train_op");
+
+            // Create the new session
+            var config = new ConfigProto
+            {
+                InterOpParallelismThreads = 1,
+                IntraOpParallelismThreads = 1,
+                LogDevicePlacement = true
+            };
+            Sess = tf.Session(g, config);
+
+            return g;
+        }
+
+        /// <summary>
         /// Prepares the feature and labeled output data to be used to train the model
         /// </summary>
         /// <param name="inputs">The feature input data</param>
@@ -145,55 +216,65 @@ namespace RobinhoodDesktop.MachineLearning
             var x = np.array(inputs, false);
             var y = np.array(labeledOutputs, false);
 
-            /* Shuffle the two arrays in-place */
+            // Shuffle the two arrays in-place
             var state = np.random.get_state();
             np.random.shuffle(x);
             np.random.set_state(state);
             np.random.shuffle(y);
 
-            /* Create views into the shuffled data for the train and test datasets */
+            // Create views into the shuffled data for the train and test datasets
             int trainLen = (int)(inputs.GetLength(0) * trainTestSplit);
             TrainFeatures = np.array(x[new Slice(0, trainLen)], true);
             TrainLabels = np.array(y[new Slice(0, trainLen)], true);
             TestFeatures = np.array(x[new Slice(TrainFeatures.Shape[0] , inputs.GetLength(0))], true);
             TestLabels = np.array(y[new Slice(TrainLabels.Shape[0], labeledOutputs.GetLength(0))], true);
+
+            // init variables
+            Sess.run(tf.global_variables_initializer());
         }
         
         /// <summary>
         /// Performs the training operation
+        /// <paramref name="epochCount"/>Indicates the current epoch counter
+        /// <paramref name="epochs"/>The number of epochs to run
         /// </summary>
-        public virtual void Train(int epochs = 5000)
+        public virtual float Train(ref int epochCount, int epochs = 5000)
         {
+            float loss = 0;
+            NDArray accuracyResult;
             var sw = new Stopwatch();
             sw.Start();
-
-            // init variables
-            Sess.run(tf.global_variables_initializer());
-
-            // check the accuracy before training
-            var accuracyResult = Sess.run(Accuracy, new FeedItem(Input, TrainFeatures), new FeedItem(YTrue, TrainLabels));
-            print($"Pre-accuacy: {accuracyResult}");
 
             // training
             foreach(var i in range(epochs))
             {
                 // by sampling some input data (fetching)
-                var loss = Sess.run(new ValueTuple<ITensorOrOperation, ITensorOrOperation>(TrainOp, LossFunc), new FeedItem(Input, TrainFeatures), new FeedItem(YTrue, TrainLabels));
+                var lossTensor = Sess.run(new ValueTuple<ITensorOrOperation, ITensorOrOperation>(TrainOp, LossFunc), new FeedItem(Input, TrainFeatures), new FeedItem(YTrue, TrainLabels));
+                loss = lossTensor.Item2;
 
                 // We regularly check the loss
-                if(i % 500 == 0)
+                if((i > 0) && ((i % 500) == 0))
                 {
                     accuracyResult = Sess.run(Accuracy, new FeedItem(Input, TrainFeatures), new FeedItem(YTrue, TrainLabels));
                     var predicitons = Sess.run(Prediction, new FeedItem(Input, TrainFeatures));
-                    print($"iter:{i} - loss:{loss.Item2} accuracy: {accuracyResult}");
+                    print($"Train iter:{epochCount} - loss:{lossTensor.Item2} accuracy: {accuracyResult}");
                 }
+                epochCount++;
             }
 
             // Finally, we check our final accuracy
             accuracyResult = Sess.run(Accuracy, new FeedItem(Input, TrainFeatures), new FeedItem(YTrue, TrainLabels));
-            print($"Post-accuacy: {accuracyResult}");
+            print($"Train iter:{epochCount} - loss:{loss} accuracy: {accuracyResult} Time taken: {sw.Elapsed.TotalSeconds}s");
+            return loss;
+        }
 
-            print($"Time taken: {sw.Elapsed.TotalSeconds}s");
+        /// <summary>
+        /// Performs the training operation
+        /// </summary>
+        public virtual float Train(int epochs = 5000)
+        {
+            int epochCount = 0;
+            return Train(ref epochCount, epochs);
         }
 
         public virtual void Test(float[,] inputs, int[,] labeledOutputs)
@@ -215,6 +296,12 @@ namespace RobinhoodDesktop.MachineLearning
         {
             // Examine the predictions
             predicitons = Sess.run(Prediction, new FeedItem(Input, inputs));
+        }
+
+        public virtual void Predict(float[,] inputs, out float[] predicitons)
+        {
+            // Examine the predictions
+            predicitons = Sess.run(Prediction, new FeedItem(Input, (NDArray)inputs)).ToArray<float>();
         }
     }
 }

@@ -115,7 +115,8 @@ namespace RobinhoodDesktop.Script
             session.SinkFile = new StockDataFile(sinkScripts.ConvertAll<string>((f) => { return Path.GetFileNameWithoutExtension(f); }), sinkScripts.ConvertAll<string>((f) => { return File.ReadAllText(f); }));
             session.SinkFile.Interval = session.SourceFile.Interval;
             script.Add("tmp/" + SINK_CLASS + ".cs");
-            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(session.SinkFile.GetSourceCode(SINK_CLASS));
+            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(session.SinkFile.GenStockDataSink());
+            script.AddRange(sinkScripts);
 
             // Create the evaluator file (needs to be compiled in the script since it references StockDataSource)
             string[] embeddedFiles = new string[]

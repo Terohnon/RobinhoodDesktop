@@ -327,7 +327,7 @@
     <Content Include="Script\Data\MovingAverage.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="Script\StockDataScript.cs" />
+    <EmbeddedResource Include="Script\StockDataSink.cs" />
     <Content Include="Script\Action\StockAction.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

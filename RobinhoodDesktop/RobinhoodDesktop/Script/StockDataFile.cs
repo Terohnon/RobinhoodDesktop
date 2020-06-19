@@ -210,7 +210,7 @@ namespace RobinhoodDesktop.Script
                 }
 
                 // Generate the source code based on the member list
-                var code = GenSourceCode(fields, sourceFields).Replace("StockDataScript", "StockDataSource");
+                var code = GenSourceCode(fields, sourceFields).Replace("StockDataSink", "StockDataSource");
                 this.SourceCode = code.ToArray();
             }
 
@@ -287,7 +287,7 @@ namespace RobinhoodDesktop.Script
             {
                 var code = "";
                 var assembly = Assembly.GetExecutingAssembly();
-                var scriptFilename = "RobinhoodDesktop.Script.StockDataScript.cs";
+                var scriptFilename = "RobinhoodDesktop.Script.StockDataSink.cs";
 
                 using(Stream stream = assembly.GetManifestResourceStream(scriptFilename))
                 using(StreamReader reader = new StreamReader(stream))
@@ -340,7 +340,7 @@ namespace RobinhoodDesktop.Script
                     code = code.Replace("///= Members ///", memberDecl);
                     for(int idx = 0; idx < Sources.Count; idx++)
                     {
-                        code += new string(Sources[idx].SourceCode).Replace("StockDataScript", "Source" + idx.ToString());
+                        code += new string(Sources[idx].SourceCode).Replace("StockDataSink", "Source" + idx.ToString());
                     }
                 }
 
@@ -561,29 +561,28 @@ namespace RobinhoodDesktop.Script
         /// <returns>The script source code</returns>
         public string GetSourceCode(string className)
         {
-            return new string(this.SourceCode).Replace("StockDataScript", className);
+            return new string(this.SourceCode).Replace("StockDataSink", className);
         }
-        
+
         /// <summary>
-        /// Combines the separate source files into a single script
+        /// Generates the source code for the stock data sink corresponding to this file
         /// </summary>
-        /// <param name="sources">The source file contents</param>
-        /// <returns>The generated source code for the stock data file</returns>
-        private string GenSourceCode(List<string> sources)
+        /// <returns>The stock data sink source code</returns>
+        public string GenStockDataSink()
         {
             var code = "";
             var assembly = Assembly.GetExecutingAssembly();
-            var scriptFilename = "RobinhoodDesktop.Script.StockDataScript.cs";
+            var scriptFilename = "RobinhoodDesktop.Script.StockDataSink.cs";
 
-            using(Stream stream = assembly.GetManifestResourceStream(scriptFilename))
-            using(StreamReader reader = new StreamReader(stream))
+            using (Stream stream = assembly.GetManifestResourceStream(scriptFilename))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 code = reader.ReadToEnd();
                 string prototypes = "";
                 string updates = "";
                 string saves = "";
                 string loads = "";
-                foreach(string name in this.Fields)
+                foreach (string name in this.Fields)
                 {
                     prototypes += "partial void " + name + "_Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex);\n";
                     prototypes += "static partial void " + name + "_Save(System.IO.Stream file);\n";
@@ -597,6 +596,19 @@ namespace RobinhoodDesktop.Script
                 code = code.Replace("///= PartialSaves ///", saves.Replace("\n", "\n                "));
                 code = code.Replace("///= PartialLoads ///", loads.Replace("\n", "\n                "));
             }
+
+            return code;
+        }
+
+
+        /// <summary>
+        /// Combines the separate source files into a single script
+        /// </summary>
+        /// <param name="sources">The source file contents</param>
+        /// <returns>The generated source code for the stock data file</returns>
+        private string GenSourceCode(List<string> sources)
+        {
+            var code = GenStockDataSink();
 
             for(int srcIdx = 0; srcIdx < sources.Count; srcIdx++)
             {

@@ -25,16 +25,16 @@ namespace RobinhoodDesktop.Script
 
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
-    public partial struct StockDataScript : StockData
+    public partial struct StockDataSink : StockData
     {
         #region Script Interface
         /// <summary>
         /// Creates a new instance of a stock data point from only a price
         /// <param name="price"> The price to use</param>
         /// </summary>
-        public static StockDataScript CreateFromPrice(float price)
+        public static StockDataSink CreateFromPrice(float price)
         {
-            var data = new StockDataScript();
+            var data = new StockDataSink();
             data.Price = price;
             return data;
         }
