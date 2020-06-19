@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 
+using Newtonsoft.Json;
 using CSScriptLibrary;
 using NetSerializer;
 
@@ -636,6 +637,47 @@ namespace RobinhoodDesktop.Script
         }
 
         #region Legacy File Interface
+        private static DateTime GetDateFromFileName(string filename)
+        {
+            int year = int.Parse(filename.Substring(filename.Length - 12, 4));
+            int month = int.Parse(filename.Substring(filename.Length - 8, 2));
+            int day = int.Parse(filename.Substring(filename.Length - 6, 2));
+            return new DateTime(year, month, day);
+        }
+
+        public static List<StockDataFile> ConvertByMonth(List<string> sourceFiles, string destDir, out List<string> filenames)
+        {
+            List<StockDataFile> files = new List<StockDataFile>();
+
+            // Divide the source files into groups based on the month
+            Dictionary<DateTime, List<string>> months = new Dictionary<DateTime, List<string>>();
+            foreach(var f in sourceFiles)
+            {
+                DateTime fTime = GetDateFromFileName(f);
+                DateTime fMonth = new DateTime(fTime.Year, fTime.Month, 1);
+                List<string> monthFiles;
+                if(!months.TryGetValue(fMonth, out monthFiles))
+                {
+                    monthFiles = new List<string>();
+                    months[fMonth] = monthFiles;
+                }
+                monthFiles.Add(f);
+            }
+
+            // Save each file as a month to the destination directory
+            filenames = new List<string>();
+            foreach (var pair in months)
+            {
+                var fname = destDir + "\\" + $"{pair.Key:yyyyMM}.rbn";
+                filenames.Add(fname);
+                var f = Convert(pair.Value, new FileStream(fname, FileMode.Create));
+                files.Add(f);
+                f.Close();
+            }
+
+            return files;
+        }
+
         /// <summary>
         /// Reads the specified data streams, and converts them into a basic stock data file
         /// </summary>
@@ -650,13 +692,10 @@ namespace RobinhoodDesktop.Script
             foreach(string filename in sourceFiles)
             {
                 // Parse the date from the filename
-                int year = int.Parse(filename.Substring(filename.Length - 12, 4));
-                int month = int.Parse(filename.Substring(filename.Length - 8, 2));
-                int day = int.Parse(filename.Substring(filename.Length - 6, 2));
-                DateTime fileDate = new DateTime(year, month, day);
+                DateTime fileDate = GetDateFromFileName(filename);
                 DateTime fileStart = fileDate.AddHours(9.5);
                 DateTime fileEnd = fileDate.AddHours(16);
-                long delayedOffset = (filename.Contains("goog")) ? 0 : new TimeSpan(0, 15, 0).Ticks;
+                long delayedOffset = (filename.Contains("goog")) ? 0 : new TimeSpan(0, 16, 0).Ticks;
 
                 // Read the initial line of the file to learn which stocks are in the file
                 StreamReader s = new StreamReader(filename);

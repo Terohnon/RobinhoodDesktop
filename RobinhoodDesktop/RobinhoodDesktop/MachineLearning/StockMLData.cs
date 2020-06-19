@@ -21,7 +21,8 @@ namespace RobinhoodDesktop.MachineLearning
             /// <param name="sampleIdx">The current index into the list of features/labels at which to populate new data</param>
             /// <param name="numFeatures">The current index into the features (should be incremented as data is added)</param>
             /// <param name="numLabels">The current index into the labels (should be incremented as data is added)</param>
-            public delegate void DataLoader(T src, float[,] features, U[,] labels, int sampleIdx, ref int numFeatures, ref int numLabels);
+            /// <param name="skip">Indicates if the data point should be skipped</param>
+            public delegate void DataLoader(T src, float[,] features, U[,] labels, int sampleIdx, ref int numFeatures, ref int numLabels, ref bool skip);
 
             /// <summary>
             /// The source data that should be loaded from
@@ -54,6 +55,7 @@ namespace RobinhoodDesktop.MachineLearning
             int numFeatures = 0;
             int numLabels = 0;
             bool autoDetectFeaturesLabels = false;
+            bool skip = false;
             if(features == null)
             {
                 features = new float[1, 1024];
@@ -99,7 +101,7 @@ namespace RobinhoodDesktop.MachineLearning
                     if((srcIdx == 0) && autoDetectFeaturesLabels)
                     {
                         sources[srcIdx][mergeIdx].Source[0].Load(session);
-                        sources[srcIdx][mergeIdx].Loader(sources[srcIdx][mergeIdx].Source[0][0], features, labels, 0, ref numFeatures, ref numLabels);
+                        sources[srcIdx][mergeIdx].Loader(sources[srcIdx][mergeIdx].Source[0][0], features, labels, 0, ref numFeatures, ref numLabels, ref skip);
                     }
                 }
                 numDataPoints += maxPoints;
@@ -137,12 +139,13 @@ namespace RobinhoodDesktop.MachineLearning
                             {
                                 mergeFeatures = numFeatures;
                                 mergeLabels = numLabels;
-                                sources[srcIdx][mergeIdx].Loader(s[pnt], features, labels, timeIdx, ref mergeFeatures, ref mergeLabels);
+                                skip = false;
+                                sources[srcIdx][mergeIdx].Loader(s[pnt], features, labels, timeIdx, ref mergeFeatures, ref mergeLabels, ref skip);
 
                                 // Check if any values are invalid
                                 for(int i = numFeatures; i < mergeFeatures; i++)
                                 {
-                                    if(float.IsNaN(features[timeIdx, i]))
+                                    if(skip || float.IsNaN(features[timeIdx, i]))
                                     {
                                         if(!skips.Contains(timeIdx)) skips.Add(timeIdx);
                                         break;

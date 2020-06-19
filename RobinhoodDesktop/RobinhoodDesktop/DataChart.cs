@@ -9,6 +9,7 @@ using System.Windows.Forms;
 
 using RobinhoodDesktop.Script;
 using CSScriptLibrary;
+using System.Threading;
 
 namespace RobinhoodDesktop
 {
@@ -89,7 +90,7 @@ namespace RobinhoodDesktop
             /// </summary>
             public System.Drawing.Color Color
             {
-                get { return Plot.Color; }
+                get { return (Plot != null) ? Plot.Color : System.Drawing.Color.Black; }
                 set { Plot.Color = value; }
             }
 
@@ -108,6 +109,11 @@ namespace RobinhoodDesktop
             /// </summary>
             public bool Locked = false;
 
+            /// <summary>
+            /// Mutex used to control access to the data
+            /// </summary>
+            public Mutex DataMutex = new Mutex(false);
+
             public PlotLine(DataChart<T> source, string symbol, string expression)
             {
                 this.Symbol = symbol;
@@ -123,36 +129,41 @@ namespace RobinhoodDesktop
             /// <param name="expression">The new expression to set</param>
             public void SetExpression(DataChart<T> source, string expression)
             {
-                System.Drawing.Color c;
-                if(Plot != null)
-                {
-                    c = this.Color;
-                    Plot.Remove(source);
-                    Plot = null;
-                } else
-                {
-                    c = source.PlotLineColors.Dequeue();
-                    source.PlotLineColors.Enqueue(c);   // Add the color to the end of the list so that it can be re-used if needed
-                }
-
                 this.Expression = expression;
-                this.GetValue = getExpressionEvaluator(expression);
-                Generate(source);
+                if (!string.IsNullOrEmpty(expression))
+                {
+                    System.Drawing.Color c;
+                    if (Plot != null)
+                    {
+                        c = this.Color;
+                        Plot.Remove(source);
+                        Plot = null;
+                    }
+                    else
+                    {
+                        c = source.PlotLineColors.Dequeue();
+                        source.PlotLineColors.Enqueue(c);   // Add the color to the end of the list so that it can be re-used if needed
+                    }
 
-                PlotLineCreator creator;
-                if(!LineCreators.TryGetValue(source.getExpressionType(Expression, GetValue), out creator))
-                {
-                    creator = DefaultCreator;
-                }
-                bool preserveAxisPosition = (source.Plot.XAxis1 != null);
-                double worldMin = preserveAxisPosition ? source.Plot.XAxis1.WorldMin : 0;
-                double worldMax = preserveAxisPosition ? source.Plot.XAxis1.WorldMax : 0;
-                Plot = creator(source, this);
-                this.Color = c;
-                if(preserveAxisPosition)
-                {
-                    source.Plot.XAxis1.WorldMin = worldMin;
-                    source.Plot.XAxis1.WorldMax = worldMax;
+                    this.GetValue = getExpressionEvaluator(expression);
+                    Generate(source);
+
+                    PlotLineCreator creator;
+                    if (!LineCreators.TryGetValue(source.getExpressionType(Expression, GetValue), out creator))
+                    {
+                        creator = DefaultCreator;
+                    }
+                    bool preserveAxisPosition = (source.Plot.XAxis1 != null);
+                    double worldMin = preserveAxisPosition ? source.Plot.XAxis1.WorldMin : 0;
+                    double worldMax = preserveAxisPosition ? source.Plot.XAxis1.WorldMax : 0;
+                    Plot = creator(source, this);
+                    Plot.SetData(Data);
+                    this.Color = c;
+                    if (preserveAxisPosition)
+                    {
+                        source.Plot.XAxis1.WorldMin = worldMin;
+                        source.Plot.XAxis1.WorldMax = worldMax;
+                    }
                 }
             }
 
@@ -162,6 +173,7 @@ namespace RobinhoodDesktop
             /// <param name="source"></param>
             public void Generate(DataChart<T> source)
             {
+                DataMutex.WaitOne();
                 this.Data = new DataTable();
                 Data.Columns.Add(source.XAxis, source.getExpressionType(source.XAxis, source.XAxisGetValue));
                 Data.Columns.Add(Expression, source.getExpressionType(Expression, GetValue));
@@ -170,7 +182,7 @@ namespace RobinhoodDesktop
                 foreach(var s in symbols)
                 {
                     List<StockDataSet<T>> sources;
-                    if(!source.DataSets.TryGetValue(s, out sources)) return;
+                    if(!source.DataSets.TryGetValue(s, out sources)) break;
 
                     // Create a table of each data point in the specified range
                     for(int i = 0; i < sources.Count; i++)
@@ -199,6 +211,7 @@ namespace RobinhoodDesktop
                 {
                     Plot.SetData(Data);
                 }
+                DataMutex.ReleaseMutex();
             }
 
             /// <summary>
@@ -209,10 +222,12 @@ namespace RobinhoodDesktop
             public string PrintValue(int dataIndex)
             {
                 string val = "";
-                if(Data.Columns.Contains(Expression) && (Data.Rows.Count > 0))
+                DataMutex.WaitOne();
+                if((Data != null) && Data.Columns.Contains(Expression) && (Data.Rows.Count > 0))
                 {
                     val = NPlot.Utils.ToDouble(Data.Rows[dataIndex][Expression]).ToString();
                 }
+                DataMutex.ReleaseMutex();
                 return val;
             }
 
@@ -250,13 +265,13 @@ namespace RobinhoodDesktop
                     double dev = 0;
                     int start = Chart.GetDataIndex(Chart.Plot.XAxis1.WorldMin);
                     int end = Chart.GetDataIndex(Chart.Plot.XAxis1.WorldMax);
-                    int step = Math.Max((end - start) / 4096, 1);
+                    int step = Math.Max((end - start) / 8192, 1);
                     int numSteps = (((end - start) + (step - 1)) / step);
                     int count = 0;
                     if(numSteps > 0)
                     {
-                        // Calculate the average first
-                        for(int i = start; i <= end; i += step)
+                        // Calculate the average, std dev, min, and max
+                        for(int i = start; (table.Rows.Count > i) && (i <= end); i += step)
                         {
                             double val = NPlot.Utils.ToDouble(table.Rows[i][Expression]);
                             if(double.IsNaN(val)) continue;
@@ -265,9 +280,18 @@ namespace RobinhoodDesktop
                             min = (val < min) ? val : min;
                             max = (val > max) ? val : max;
                         }
-                        dev = Math.Sqrt(dev / count);
-                        PlotYAxis.WorldMin = Math.Max(avg - ((avg - min) * 1.1), avg - (dev * 4));
-                        PlotYAxis.WorldMax = Math.Min(avg + ((max - avg) * 1.1), avg + (dev * 4));
+
+                        // Set the chart to show the entire data range
+                        PlotYAxis.WorldMin = avg - ((avg - min) * 1.1);
+                        PlotYAxis.WorldMax = avg + ((max - avg) * 1.1);
+
+                        // When plotting time, hide some of the outliers
+                        if (Chart.XAxis.Equals("Time"))
+                        {
+                            dev = Math.Sqrt(dev / count);
+                            PlotYAxis.WorldMin = Math.Max(PlotYAxis.WorldMin, avg - (dev * 6));
+                            PlotYAxis.WorldMax = Math.Min(PlotYAxis.WorldMax, avg + (dev * 6));
+                        }
                     }
                 }
                 public abstract void SetData(DataTable table);
@@ -424,7 +448,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The lines being plotted
         /// </summary>
-        protected List<PlotLine> Lines = new List<PlotLine>();
+        public List<PlotLine> Lines = new List<PlotLine>();
 
         /// <summary>
         /// Stores a list of public fields in the data set type
@@ -486,7 +510,6 @@ namespace RobinhoodDesktop
             foreach(var l in Lines)
             {
                 l.SetExpression(this, l.Expression);
-                l.Generate(this);
             }
 
             // Select the proper X axis and refresh the plot
@@ -507,7 +530,6 @@ namespace RobinhoodDesktop
             {
                 newPlot = new PlotLine(this, symbol, expression);
                 Lines.Add(newPlot);
-                Refresh();
             }
 
             return newPlot;
@@ -518,12 +540,13 @@ namespace RobinhoodDesktop
         /// </summary>
         public void Refresh()
         {
-            foreach(var l in Lines)
+            if (Canvas.IsHandleCreated)
             {
-                l.Generate(this);
+                Canvas.BeginInvoke((Action)(() =>
+                {
+                    Plot.Refresh();
+                }));
             }
-
-            Plot.Refresh();
         }
 
         /// <summary>
@@ -544,7 +567,38 @@ namespace RobinhoodDesktop
         {
             foreach(var l in Lines)
             {
+                l.DataMutex.WaitOne();
                 l.Plot.UpdateDataMinMax(l.Data);
+                l.DataMutex.ReleaseMutex();
+            }
+
+            List<Tuple<List<PlotLine>, double, double>> groups = new List<Tuple<List<PlotLine>, double, double>>
+            {
+                { new Tuple<List<PlotLine>, double, double>(new List<PlotLine>() { Lines[0]}, Lines[0].Plot.PlotYAxis.WorldMin, Lines[0].Plot.PlotYAxis.WorldMax) }
+            };
+            for(int i = 1; i < Lines.Count; i++)
+            {
+                for(int j = 0; j < groups.Count; j++)
+                {
+                    double groupAvg = (groups[j].Item2 + groups[j].Item3) / 2;
+                    double groupRange = (groups[j].Item3 - groups[j].Item2) / 2;
+                    double tolerance = 2.0f;
+                    if (((Lines[i].Plot.PlotYAxis.WorldMin > (groupAvg - (groupRange * tolerance))) &&
+                         (Lines[i].Plot.PlotYAxis.WorldMax < (groupAvg + (groupRange * tolerance)))) ||
+                        (Lines[i].Locked && groups[j].Item1[0].Locked))
+                    {
+                        var l = groups[j].Item1;
+                        l.Add(Lines[i]);
+                        groups[j] = new Tuple<List<PlotLine>, double, double>(l,
+                            Math.Min(Lines[i].Plot.PlotYAxis.WorldMin, groups[j].Item2),
+                            Math.Max(Lines[i].Plot.PlotYAxis.WorldMax, groups[j].Item3));
+                        for(int k = 0; k < l.Count; k++)
+                        {
+                            l[k].Plot.PlotYAxis.WorldMin = groups[j].Item2;
+                            l[k].Plot.PlotYAxis.WorldMax = groups[j].Item3;
+                        }
+                    }
+                }
             }
         }
 
@@ -552,11 +606,12 @@ namespace RobinhoodDesktop
         /// Sets the stock symbol for all plot lines
         /// </summary>
         /// <param name="symbol">The symbol to set</param>
-        protected void SetPlotLineSymbol(string symbol)
+        public void SetPlotLineSymbol(string symbol)
         {
             foreach(var l in Lines)
             {
                 if(!l.Locked) l.Symbol = symbol;
+                l.Generate(this);
             }
         }
 
@@ -617,7 +672,7 @@ namespace RobinhoodDesktop
         public int GetDataIndex(double val)
         {
             int idx = -1;
-            if((Lines.Count > 0) && (Lines[0].Data != null))
+            if((Lines.Count > 0) && (Lines[0].Data != null) && Lines[0].DataMutex.WaitOne())
             {
                 var src = Lines[0].Data;
                 int min = 0;
@@ -641,6 +696,7 @@ namespace RobinhoodDesktop
                         min = mid;
                     }
                 }
+                Lines[0].DataMutex.ReleaseMutex();
             }
 
             return idx;
@@ -668,10 +724,24 @@ namespace RobinhoodDesktop
             {
                 // Order the list based on the lame length
                 var fields = GetFields().ToList();
+                fields.AddRange(typeof(T).GetProperties().ToList().ConvertAll((f) => { return f.Name; }));
+                fields.AddRange(typeof(T).GetMethods().ToList().ConvertAll((f) => { return f.Name; }));
                 fields.Sort((f1, f2) => { return f2.Length.CompareTo(f1.Length); });
 
-                // First replace the fields with an index to prevent names within a name from getting messed up
+                // First remove any string literals
                 string src = expression;
+                List<string> stringLiterals = new List<string>();
+                for(int i = src.IndexOf('"'); (i >= 0) && (i < src.Length); i = src.IndexOf('"'))
+                {
+                    int end = src.IndexOf('"', i + 1);
+                    if((end >= 0) && (end < src.Length))
+                    {
+                        stringLiterals.Add(src.Substring(i, (end - i) + 1));
+                        src = src.Replace(stringLiterals.Last(), string.Format("<=s{0}>", stringLiterals.Count - 1));
+                    }
+                }
+
+                // First replace the fields with an index to prevent names within a name from getting messed up
                 for(int i = 0; i < fields.Count; i++)
                 {
                     src = src.Replace(fields[i], string.Format("<={0}>", i));
@@ -681,6 +751,12 @@ namespace RobinhoodDesktop
                 for(int i = 0; i < fields.Count; i++)
                 {
                     src = src.Replace(string.Format("<={0}>", i), string.Format("data[updateIndex].{0}", fields[i]));
+                }
+
+                // Restore the string literals
+                for (int i = 0; i < stringLiterals.Count; i++)
+                {
+                    src = src.Replace(string.Format("<=s{0}>", i), stringLiterals[i]);
                 }
 
                 // Build the expression into an accessor function

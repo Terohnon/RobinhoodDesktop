@@ -90,10 +90,13 @@ namespace RobinhoodDesktop.Script
         public override TimeSpan Interval
         {
             set {
-                _interval = value;
-                if(DataSet.Count > 0)
+                if (_interval != value)
                 {
-                    DataSet.Clear();
+                    _interval = value;
+                    if (DataSet.Count > 0)
+                    {
+                        DataSet.Clear();
+                    }
                 }
             }
             get { return (_interval != TimeSpan.Zero) ? _interval : File.Interval; }

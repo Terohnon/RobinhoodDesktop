@@ -60,8 +60,8 @@ namespace RobinhoodDesktop
             {
                 if(eventArgs.KeyCode == Keys.Enter)
                 {
-                    SetPlotLineSymbol(SymbolTextbox.Text);
                     SetSymbolInterval();
+                    SetPlotLineSymbol(SymbolTextbox.Text);
                     this.Refresh();
                 }
             };
@@ -163,6 +163,10 @@ namespace RobinhoodDesktop
 
                     // Set the new interval
                     SetSymbolInterval();
+                    foreach (var l in Lines)
+                    {
+                        l.Generate(this);
+                    }
                     Refresh();
                 };
                 GuiPanel.Controls.Add(pair.Item1);
@@ -170,7 +174,8 @@ namespace RobinhoodDesktop
             IntervalButtons[0].Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
 
             // Start with one line
-            AddPlotLine();
+            var fields = GetFields();
+            AddPlotLine(fields[0]);
         }
 
         #region Variables
@@ -329,37 +334,51 @@ namespace RobinhoodDesktop
             /// <returns></returns>
             public override bool DoMouseMove(int X, int Y, Modifier keys, InteractivePlotSurface2D ps)
             {
+                if (Chart.Lines.Count == 0) return false;
                 double mouseVal = Chart.Plot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false);
-                int idx = Chart.GetDataIndex(mouseVal);
-                if(idx >= 0)
+                
+                // Set the text values based on the cursor position
+                if(Chart.XAxis.Equals("Time"))
                 {
-                    // Set the text values based on the cursor position
-                    if(Chart.XAxis.Equals("Time"))
+                    Chart.Lines[0].DataMutex.WaitOne();
+                    int idx = Chart.GetDataIndex(mouseVal);
+                    if (idx >= 0)
                     {
                         Chart.XAxisValue.Text = string.Format("{0:t} {0:MMM d} '{0:yy}", Chart.Lines[0].Data.Rows[idx][Chart.XAxis]);
                     }
-                    else
-                    {
-                        Chart.XAxisValue.Text = NPlot.Utils.ToDouble(Chart.Lines[0].Data.Rows[idx][Chart.XAxis]).ToString();
-                    }
-                    for(int i = 0; i < Chart.Lines.Count; i++)
+                    Chart.Lines[0].DataMutex.ReleaseMutex();
+                    for (int i = 0; i < Chart.Lines.Count; i++)
                     {
                         Chart.PlotLineLabels[i].Text = Chart.Lines[i].PrintValue(idx);
                     }
-
-                    // Draw the line on the chart to show the cursor position
-                    using(System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
-                    {
-                        PhysicalAxis yAxis = Chart.Plot.PhysicalYAxis1Cache;
-                        g.Clear(System.Drawing.Color.Transparent);
-
-                        // Draw the line
-                        g.DrawLine(Lines.TimePen, X, yAxis.PhysicalMin.Y, X, yAxis.PhysicalMax.Y);
-                    }
-
-                    // Refresh the canvas to display the updated lines
-                    Chart.Plot.Canvas.Refresh();
+                        
                 }
+                else
+                {
+                    Chart.XAxisValue.Text = mouseVal.ToString();
+                    for (int i = 0; i < Chart.Lines.Count; i++)
+                    {
+                        if (Chart.Lines[i].Plot != null)
+                        {
+                            Chart.PlotLineLabels[i].Text = Chart.Lines[i].Plot.PlotYAxis.PhysicalToWorld(new System.Drawing.Point(X, Y),
+                                                                                                         Chart.Plot.PhysicalYAxis1Cache.PhysicalMin,
+                                                                                                         Chart.Plot.PhysicalYAxis1Cache.PhysicalMax, false).ToString();
+                        }
+                    }
+                }
+
+                // Draw the line on the chart to show the cursor position
+                using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
+                {
+                    PhysicalAxis yAxis = Chart.Plot.PhysicalYAxis1Cache;
+                    g.Clear(System.Drawing.Color.Transparent);
+
+                    // Draw the line
+                    g.DrawLine(Lines.TimePen, X, yAxis.PhysicalMin.Y, X, yAxis.PhysicalMax.Y);
+                }
+
+                // Refresh the canvas to display the updated lines
+                Chart.Plot.Canvas.Refresh();
 
                 return false;
             }
@@ -511,10 +530,10 @@ namespace RobinhoodDesktop
         /// <summary>
         /// Adds a new line to the plot
         /// </summary>
-        private void AddPlotLine()
+        public void AddPlotLine(string expression = "")
         {
             var fields = GetFields();
-            var plot = this.AddPlot(SymbolTextbox.Text, fields[Math.Min(PlotLineTextboxes.Count, fields.Count - 1)]);
+            var plot = this.AddPlot(SymbolTextbox.Text, expression);
             BorderTextBox plotTextbox = new BorderTextBox();
             plotTextbox.BorderColor = plot.Color;
             plotTextbox.Text = plot.Expression;
@@ -534,19 +553,19 @@ namespace RobinhoodDesktop
                         this.PlotLineTextboxes.Remove(t);
                         this.GuiPanel.Controls.Remove(t);
                         PackPlotTextboxes();
-                        this.Refresh();
                     }
                     else
                     {
                         try {
                             plot.SetExpression(this, plotTextbox.Text);
                             ErrorMessageLabel.Visible = false;
+                            plotTextbox.BorderColor = plot.Color;
                         } catch(Exception ex) {
                             ErrorMessageLabel.Text = ex.ToString();
                             ErrorMessageLabel.Visible = true;
                         }
                     }
-                    this.Refresh();
+                    Plot.Refresh();
                 }
             };
             plotTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;

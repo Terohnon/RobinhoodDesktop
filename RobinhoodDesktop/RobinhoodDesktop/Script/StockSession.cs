@@ -72,6 +72,12 @@ namespace RobinhoodDesktop.Script
         [NonSerialized]
         public static AddGuiFunc AddToGui = null;
         public delegate void AddGuiFunc(System.Windows.Forms.Control c);
+
+        /// <summary>
+        /// The container object that other GUI elements should be added to
+        /// </summary>
+        [NonSerialized]
+        public static System.Windows.Forms.Control GuiContainer = null;
         #endregion
 
         public static StockSession Start(List<string> sources, List<string> sinkScripts, string executeScript)
@@ -87,11 +93,12 @@ namespace RobinhoodDesktop.Script
             {
                 System.Windows.Forms.SaveFileDialog saveDiag = new System.Windows.Forms.SaveFileDialog();
                 saveDiag.Title = "Save converted data file as...";
-                if(saveDiag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                saveDiag.CheckFileExists = false;
+                if (saveDiag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    var convertedFile = StockDataFile.Convert(legacyFiles, new FileStream(saveDiag.FileName, FileMode.Create));
-                    convertedFile.Close();
-                    sources.Add(saveDiag.FileName);
+                    List<string> convertedFileNames;
+                    var convertedFiles = StockDataFile.ConvertByMonth(legacyFiles, Path.GetDirectoryName(saveDiag.FileName), out convertedFileNames);
+                    foreach (var cf in convertedFileNames) sources.Add(cf);
                 }
                 else
                 {
@@ -141,9 +148,17 @@ namespace RobinhoodDesktop.Script
             {
                 if(!string.IsNullOrEmpty(executeScript))
                 {
-                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug, "TensorFlow.NET.dll", "Google.Protobuf.dll", "NumSharp.Lite", "netstandard", "System.Memory", "System.Numerics");
+                    CSScript.EvaluatorConfig.Engine = EvaluatorEngine.Mono;
+                    CSScript.MonoEvaluator.CompilerSettings.Platform = Mono.CSharp.Platform.X64;
+                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug, "TensorFlow.NET.dll", 
+                                                                                                 "Google.Protobuf.dll",
+                                                                                                 "Newtonsoft.Json",
+                                                                                                 "NumSharp.Lite", 
+                                                                                                 "netstandard", 
+                                                                                                 "System.Memory", 
+                                                                                                 "System.Numerics");
                     var run = session.ScriptInstance.GetStaticMethod("*.Run", session);
-                    run(session);
+                    System.Threading.Tasks.Task.Run(() => { run(session); });
                 }
             }
             catch(Exception ex)

@@ -206,6 +206,7 @@ namespace RobinhoodDesktop.Script
                 };
 
                 LiveData[target.Symbol] = new Tuple<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>, DataAccessor.Subscription>(data, sub);
+                DerivedData[target.Symbol].Add((StockDataSet<StockDataSink>)data);
             }
         }
 
@@ -242,6 +243,7 @@ namespace RobinhoodDesktop.Script
         public void SetLive(TimeSpan? liveInterval = null)
         {
             this.LiveData = new Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>, DataAccessor.Subscription>>();
+            this.DerivedData = new Dictionary<string, List<StockDataSet<StockDataSink>>>();
             this.LiveInterval = ((liveInterval != null) ? liveInterval.Value : new TimeSpan(0, 0, 1));
             this.Live = true;
 
@@ -327,6 +329,15 @@ namespace RobinhoodDesktop.Script
             }
             state.LastProcessedStartTime = start;
             return state;
+        }
+
+        /// <summary>
+        /// Creates a new chart of the data loaded into the processor
+        /// </summary>
+        /// <returns>The data chart</returns>
+        public DataChartGui<StockDataSink> CreateChart()
+        {
+            return new DataChartGui<StockDataSink>(DerivedData, Session.SinkFile, Session);
         }
         #endregion
     }
