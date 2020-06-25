@@ -11,9 +11,9 @@ using NPlot;
 
 namespace RobinhoodDesktop
 {
-    public class DataChartGui<T> : DataChart<T> where T : struct, StockData
+    public class DataChartGui : DataChart
     {
-        public DataChartGui(Dictionary<string, List<StockDataSet<T>>> dataSets, StockDataFile file, StockSession session) : base(dataSets, file, session)
+        public DataChartGui(Dictionary<string, List<StockDataInterface>> dataSets, StockDataFile file, StockSession session) : base(dataSets, file, session)
         {
             GuiPanel = new Panel();
             GuiPanel.Size = new System.Drawing.Size(600, 300);
@@ -173,9 +173,21 @@ namespace RobinhoodDesktop
             }
             IntervalButtons[0].Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
 
+            ChartChanged += () =>
+            {
+                XAxisTextbox.Text = XAxis;
+                foreach (var l in Lines)
+                {
+                    if (!l.Locked)
+                    {
+                        SymbolTextbox.Text = l.Symbol;
+                        break;
+                    }
+                }
+            };
+
             // Start with one line
-            var fields = GetFields();
-            AddPlotLine(fields[0]);
+            AddPlotLine("Price");
         }
 
         #region Variables
@@ -239,7 +251,7 @@ namespace RobinhoodDesktop
         #region Types
         private class HoverInteraction : NPlot.Interaction
         {
-            public HoverInteraction(DataChartGui<T> chart)
+            public HoverInteraction(DataChartGui chart)
             {
                 this.Chart = chart;
                 Lines = new LineDrawer();
@@ -281,7 +293,7 @@ namespace RobinhoodDesktop
             /// <summary>
             /// The chart the interaction should update
             /// </summary>
-            public DataChartGui<T> Chart;
+            public DataChartGui Chart;
 
             /// <summary>
             /// The percentage from the current price at which the min and max guidelines should be drawn
@@ -334,7 +346,7 @@ namespace RobinhoodDesktop
             /// <returns></returns>
             public override bool DoMouseMove(int X, int Y, Modifier keys, InteractivePlotSurface2D ps)
             {
-                if (Chart.Lines.Count == 0) return false;
+                if ((Chart.Lines.Count == 0) || (Chart.Plot.PhysicalXAxis1Cache == null)) return false;
                 double mouseVal = Chart.Plot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false);
                 
                 // Set the text values based on the cursor position
@@ -489,7 +501,12 @@ namespace RobinhoodDesktop
         {
             int startIdx = Math.Max(search.LastIndexOfAny(new char[] { ' ', ',', '+', '-', '*', '/', '(', ')', '.', '!', '^', '&', '|' }) + 1, 0);
             string fieldName = search.Substring(startIdx);
-            var possibleFields = GetFields().Where((s) => { return s.StartsWith(fieldName); }).ToList();
+            Type dataType = getDataType();
+            var fields = new List<string>();
+            fields.AddRange(dataType.GetFields().ToList().ConvertAll((f) => { return f.Name; }));
+            fields.AddRange(dataType.GetProperties().ToList().ConvertAll((f) => { return f.Name; }));
+            fields.AddRange(dataType.GetMethods().ToList().ConvertAll((f) => { return f.Name; }));
+            var possibleFields = fields.Where((s) => { return s.StartsWith(fieldName); }).ToList();
             var suggestions = possibleFields.ConvertAll((s) => { return search.Substring(0, startIdx) + s; }).ToArray();
             return suggestions;
         }
@@ -513,7 +530,7 @@ namespace RobinhoodDesktop
         private void SetSymbolInterval()
         {
             TimeSpan span = IntervalButtons.Where((i) => { return i.Item1.Image == GuiButton.ButtonImages[(int)GuiButton.ButtonImage.GREEN_WHITE]; }).First().Item2;
-            List<StockDataSet<T>> symbolDataSets;
+            List<StockDataInterface> symbolDataSets;
             List<string> symbols = GetSymbolList(SymbolTextbox.Text);
             foreach(var symbol in symbols)
             {
@@ -521,7 +538,7 @@ namespace RobinhoodDesktop
                 {
                     foreach(var s in symbolDataSets)
                     {
-                        s.Interval = span;
+                        s.SetInterval(span);
                     }
                 }
             }
@@ -532,7 +549,6 @@ namespace RobinhoodDesktop
         /// </summary>
         public void AddPlotLine(string expression = "")
         {
-            var fields = GetFields();
             var plot = this.AddPlot(SymbolTextbox.Text, expression);
             BorderTextBox plotTextbox = new BorderTextBox();
             plotTextbox.BorderColor = plot.Color;
@@ -652,6 +668,11 @@ namespace RobinhoodDesktop
             this.PlotLineLabels.Add(plotLabel);
             this.GuiPanel.Controls.Add(plotLabel);
             plotLabel.BringToFront();
+
+            // Register a callback to update the GUI if the plot's expression is changed via a script
+            plot.ExpressionChanged += (line) => {
+                plotTextbox.Text = line.Expression;
+            };
 
             PackPlotTextboxes();
             this.Refresh();

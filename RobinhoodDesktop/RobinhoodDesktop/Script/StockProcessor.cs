@@ -17,6 +17,33 @@ namespace RobinhoodDesktop.Script
     [Serializable]
     public class StockProcessor
     {
+        /// <summary>
+        /// The created stock-processor
+        /// </summary>
+        private static StockProcessor Instance;
+
+        /// <summary>
+        /// Returns the stock processor instance, or creates one if there isn't one already
+        /// </summary>
+        /// <param name="session">The stock session to create the processor for</param>
+        /// <returns>The stock processor instance</returns>
+        public static StockProcessor GetInstance(StockSession session = null)
+        {
+            if(Instance == null)
+            {
+                if(session != null)
+                {
+                    Instance = new StockProcessor(session);
+                }
+                else
+                {
+                    throw new Exception("Must specify the session the first time the processor instance is accessed.");
+                }
+            }
+
+            return Instance;
+        }
+
         public StockProcessor(StockSession session)
         {
             this.Session = session;
@@ -26,8 +53,8 @@ namespace RobinhoodDesktop.Script
 
             // Create the derived data set
             HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.Derive(Session.SourceFile.GetSegments<StockDataSource>(), Session.SinkFile, CreateSink, GetProcessingState);
-            DerivedData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData);
-            Session.SinkFile.SetSegments<StockDataSink>(DerivedData);
+            DerivedData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToInterface(HistoricalData);
+            Session.SinkFile.SetSegments<StockDataSink>(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData));
         }
 
         #region Types
@@ -81,7 +108,7 @@ namespace RobinhoodDesktop.Script
         /// The historical data, cast to a simple data set container
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, List<StockDataSet<StockDataSink>>> DerivedData;
+        public Dictionary<string, List<StockDataInterface>> DerivedData;
 
         /// <summary>
         /// Indicates if the processor should operate on live data
@@ -243,7 +270,7 @@ namespace RobinhoodDesktop.Script
         public void SetLive(TimeSpan? liveInterval = null)
         {
             this.LiveData = new Dictionary<string, Tuple<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>, DataAccessor.Subscription>>();
-            this.DerivedData = new Dictionary<string, List<StockDataSet<StockDataSink>>>();
+            this.DerivedData = new Dictionary<string, List<StockDataInterface>>();
             this.LiveInterval = ((liveInterval != null) ? liveInterval.Value : new TimeSpan(0, 0, 1));
             this.Live = true;
 
@@ -297,7 +324,7 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Callback used to create a stock data instance
         /// </summary>
-        public StockProcessingState GetProcessingState(StockDataSetInterface data)
+        public StockProcessingState GetProcessingState(StockDataInterface data)
         {
             Dictionary<TimeSpan, StockProcessingState> intervals;
             StockProcessingState state;
@@ -335,9 +362,9 @@ namespace RobinhoodDesktop.Script
         /// Creates a new chart of the data loaded into the processor
         /// </summary>
         /// <returns>The data chart</returns>
-        public DataChartGui<StockDataSink> CreateChart()
+        public DataChartGui CreateChart()
         {
-            return new DataChartGui<StockDataSink>(DerivedData, Session.SinkFile, Session);
+            return new DataChartGui(DerivedData, Session.SinkFile, Session);
         }
         #endregion
     }

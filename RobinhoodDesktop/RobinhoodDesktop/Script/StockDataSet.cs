@@ -5,20 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
+using CSScriptLibrary;
+
 namespace RobinhoodDesktop.Script
 {
-    public interface StockDataSetInterface
-    {
-        /// <summary>
-        /// Outputs information about the data set
-        /// </summary>
-        /// <param name="symbol">The stock symbol the dataset is for</param>
-        /// <param name="start">The start time of the dataset</param>
-        /// <param name="interval">The interval between data points in the set</param>
-        void GetInfo(out string symbol, out DateTime start, out TimeSpan interval);
-    }
 
-    public class StockDataSet<T> : StockDataSetInterface where T : struct, StockData
+    public class StockDataSet<T> : StockDataInterface where T : struct, StockData
     {
         public StockDataSet(string symbol, DateTime start, StockDataFile file, long address = -1)
         {
@@ -134,6 +126,15 @@ namespace RobinhoodDesktop.Script
             start = this.Start;
             interval = this.Interval;
         }
+
+        /// <summary>
+        /// Sets the interval between points for the data set
+        /// </summary>
+        /// <param name="interval">The interval to set</param>
+        public void SetInterval(TimeSpan interval)
+        {
+            this.Interval = interval;
+        }
         #endregion
 
         /// <summary>
@@ -228,6 +229,93 @@ namespace RobinhoodDesktop.Script
         public virtual int GetSourceCount()
         {
             return File.GetSegmentSize(this);
+        }
+
+        /// <summary>
+        /// Returns the type held in the stock data set
+        /// </summary>
+        /// <returns>The data type</returns>
+        public virtual Type GetDataType()
+        {
+            return typeof(T);
+        }
+
+        /// <summary>
+        /// Compiles a script to evaluate the specified expression
+        /// </summary>
+        /// <param name="expression">The expression to get a value from the dataset</param>
+        /// <returns>The delegate used to get the desired value from a dataset</returns>
+        public MethodDelegate GetExpressionEvaluator(string expression)
+        {
+            MethodDelegate accessor = null;
+
+            // Check for the special case of requesting the time
+            if (expression.Equals("Time"))
+            {
+                accessor = new MethodDelegate((object[] p) =>
+                {
+                    StockDataSet<T> data = (StockDataSet<T>)p[0];
+                    int index = (int)p[1];
+                    return data.Time(index);
+                });
+            }
+            else
+            {
+                // Order the list based on the lame length
+                Type dataType = GetDataType();
+                var fields = new List<string>();
+                fields.AddRange(typeof(T).GetFields().ToList().ConvertAll((f) => { return f.Name; }));
+                fields.AddRange(typeof(T).GetProperties().ToList().ConvertAll((f) => { return f.Name; }));
+                fields.AddRange(typeof(T).GetMethods().ToList().ConvertAll((f) => { return f.Name; }));
+                fields.Sort((f1, f2) => { return f2.Length.CompareTo(f1.Length); });
+
+                // First remove any string literals
+                string src = expression;
+                List<string> stringLiterals = new List<string>();
+                for (int i = src.IndexOf('"'); (i >= 0) && (i < src.Length); i = src.IndexOf('"'))
+                {
+                    int end = src.IndexOf('"', i + 1);
+                    if ((end >= 0) && (end < src.Length))
+                    {
+                        stringLiterals.Add(src.Substring(i, (end - i) + 1));
+                        src = src.Replace(stringLiterals.Last(), string.Format("<=s{0}>", stringLiterals.Count - 1));
+                    }
+                }
+
+                // First replace the fields with an index to prevent names within a name from getting messed up
+                for (int i = 0; i < fields.Count; i++)
+                {
+                    src = src.Replace(fields[i], string.Format("<={0}>", i));
+                }
+
+                // Next pre-pend the data set to the field names
+                for (int i = 0; i < fields.Count; i++)
+                {
+                    src = src.Replace(string.Format("<={0}>", i), string.Format("data[updateIndex].{0}", fields[i]));
+                }
+
+                // Restore the string literals
+                for (int i = 0; i < stringLiterals.Count; i++)
+                {
+                    src = src.Replace(string.Format("<=s{0}>", i), stringLiterals[i]);
+                }
+
+                // Build the expression into an accessor function
+                src = "namespace RobinhoodDesktop.Script { public class ExpressionAccessor{ public static object GetValue(StockDataSet<" + typeof(T).Name + "> data, int updateIndex) { return " + src + ";} } }";
+                string assemblyFile = System.Reflection.Assembly.GetAssembly(typeof(T)).Location;
+                var script = CSScript.LoadCode(src, assemblyFile);
+                accessor = script.GetStaticMethod("RobinhoodDesktop.Script.ExpressionAccessor.GetValue", new StockDataSet<T>("", DateTime.Now, null), 0);
+            }
+            return accessor;
+        }
+
+        /// <summary>
+        /// Returns the number of points in the dataset
+        /// </summary>
+        /// <returns>The number of points in the set</returns>
+        public int GetCount()
+        {
+            return Count;
         }
     }
 }

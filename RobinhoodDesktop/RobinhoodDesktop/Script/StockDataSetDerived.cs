@@ -63,6 +63,23 @@ namespace RobinhoodDesktop.Script
             return castedSeg;
         }
 
+        /// <summary>
+        /// Sets the stock data segments which are present in this file
+        /// </summary>
+        /// <typeparam name="T">The derived data point type</typeparam>
+        /// <typeparam name="U">The base data point type</typeparam>
+        /// <typeparam name="V">The processing state type</typeparam>
+        /// <param name="segments">The set of segments to specify for this file</param>
+        /// <returns>The data sets as an interface</returns>
+        public static Dictionary<string, List<StockDataInterface>> CastToInterface(Dictionary<string, List<StockDataSetDerived<T, U, V>>> segments)
+        {
+            Dictionary<string, List<StockDataInterface>> castedSeg = segments.Cast<KeyValuePair<string, List<StockDataSetDerived<T, U, V>>>>().ToDictionary(
+                (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return (string)pair.Key; },
+                (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return pair.Value.ConvertAll((x) => { return (StockDataInterface)x; }); }
+            );
+            return castedSeg;
+        }
+
         #region Variables
         /// <summary>
         /// The data this is derived from
@@ -113,7 +130,7 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Callback used to create a stock data instance
         /// </summary>
-        public delegate V StockProcessingStateAccessor(StockDataSetInterface data);
+        public delegate V StockProcessingStateAccessor(StockDataInterface data);
         #endregion
 
         /// <summary>
@@ -199,6 +216,15 @@ namespace RobinhoodDesktop.Script
         public override int GetSourceCount()
         {
             return SourceData.GetSourceCount();
+        }
+
+        /// <summary>
+        /// Returns the type held in the stock data set
+        /// </summary>
+        /// <returns>The data type</returns>
+        public override Type GetDataType()
+        {
+            return typeof(T);
         }
     }
 }

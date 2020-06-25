@@ -344,6 +344,7 @@
     <Compile Include="Scripting.Extensions.cs" />
     <Compile Include="Scripting.native.cs" />
     <Compile Include="Script\StockDataBase.cs" />
+    <Compile Include="Script\StockDataInterface.cs" />
     <Compile Include="Script\StockDataSetDerived.cs" />
     <EmbeddedResource Include="Script\StockProcessor.cs" />
     <Compile Include="Script\StockSession.cs" />

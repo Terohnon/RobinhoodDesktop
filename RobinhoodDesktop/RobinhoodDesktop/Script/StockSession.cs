@@ -158,6 +158,8 @@ namespace RobinhoodDesktop.Script
                                                                                                  "netstandard", 
                                                                                                  "System.Memory", 
                                                                                                  "System.Numerics");
+                    var getProcessor = session.ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockProcessor.GetInstance", session);
+                    var processor = getProcessor(session);
                     var run = session.ScriptInstance.GetStaticMethod("*.Run", session);
                     System.Threading.Tasks.Task.Run(() => { run(session); });
                 }
