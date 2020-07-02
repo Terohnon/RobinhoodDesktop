@@ -54,6 +54,7 @@ namespace RobinhoodDesktop.Script
             // Create the derived data set
             HistoricalData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.Derive(Session.SourceFile.GetSegments<StockDataSource>(), Session.SinkFile, CreateSink, GetProcessingState);
             DerivedData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToInterface(HistoricalData);
+            Session.Data = DerivedData;
             Session.SinkFile.SetSegments<StockDataSink>(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData));
         }
 
@@ -364,7 +365,7 @@ namespace RobinhoodDesktop.Script
         /// <returns>The data chart</returns>
         public DataChartGui CreateChart()
         {
-            return new DataChartGui(DerivedData, Session.SinkFile, Session);
+            return new DataChartGui(DerivedData, Session);
         }
         #endregion
     }

@@ -245,17 +245,15 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="expression">The expression to get a value from the dataset</param>
         /// <returns>The delegate used to get the desired value from a dataset</returns>
-        public MethodDelegate GetExpressionEvaluator(string expression)
+        public Func<StockDataInterface, int, object> GetExpressionEvaluator(string expression)
         {
-            MethodDelegate accessor = null;
+            Func<StockDataSet<T>, int, object> accessor = null;
 
             // Check for the special case of requesting the time
             if (expression.Equals("Time"))
             {
-                accessor = new MethodDelegate((object[] p) =>
+                accessor = new Func<StockDataSet<T>, int, object>((data, index) =>
                 {
-                    StockDataSet<T> data = (StockDataSet<T>)p[0];
-                    int index = (int)p[1];
                     return data.Time(index);
                 });
             }
@@ -301,12 +299,14 @@ namespace RobinhoodDesktop.Script
                 }
 
                 // Build the expression into an accessor function
-                src = "namespace RobinhoodDesktop.Script { public class ExpressionAccessor{ public static object GetValue(StockDataSet<" + typeof(T).Name + "> data, int updateIndex) { return " + src + ";} } }";
-                string assemblyFile = System.Reflection.Assembly.GetAssembly(typeof(T)).Location;
-                var script = CSScript.LoadCode(src, assemblyFile);
-                accessor = script.GetStaticMethod("RobinhoodDesktop.Script.ExpressionAccessor.GetValue", new StockDataSet<T>("", DateTime.Now, null), 0);
+                //src = "namespace RobinhoodDesktop.Script { public class ExpressionAccessor{ public static object GetValue(StockDataSet<" + typeof(T).Name + "> data, int updateIndex) { return " + src + ";} } }";
+                var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf<T>();
+                //var script = CSScript.LoadCode(src);
+                //CSScript.Evaluator.
+                //accessor = script.GetStaticMethod("*.*");
+                accessor = compiler.LoadDelegate<Func<StockDataSet<T>, int, object>>(@"object GetValue(RobinhoodDesktop.Script.StockDataSet<" + typeof(T).FullName + "> data, int updateIndex) { return " + src + ";}");
             }
-            return accessor;
+            return new Func<StockDataInterface, int, object>((data, index) => { return accessor((StockDataSet<T>)data, index); });
         }
 
         /// <summary>

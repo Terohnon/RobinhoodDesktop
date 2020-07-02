@@ -8,6 +8,7 @@ using System.Reflection;
 
 using CSScriptLibrary;
 using System.Windows.Controls;
+using Mono.CSharp;
 
 namespace RobinhoodDesktop.Script
 {
@@ -39,6 +40,11 @@ namespace RobinhoodDesktop.Script
 
         #region Variables
         /// <summary>
+        /// Stores a reference to the most recent session that was created (probably the only session)
+        /// </summary>
+        public static StockSession Instance;
+
+        /// <summary>
         /// The path to the source data file
         /// </summary>
         public string SourceFilePath;
@@ -46,7 +52,7 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// The list of scripts that should be loaded to process the stock data
         /// </summary>
-        public List<string> StockDataScripts = new List<string>();
+        public List<string> Scripts = new List<string>();
 
         /// <summary>
         /// The data file the source stock data is being pulled from
@@ -59,6 +65,12 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         [NonSerialized]
         public StockDataFile SinkFile;
+
+        /// <summary>
+        /// The stock data associated with the session
+        /// </summary>
+        [NonSerialized]
+        public Dictionary<string, List<StockDataInterface>> Data;
 
         /// <summary>
         /// The dynamically loaded functionality
@@ -78,13 +90,19 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         [NonSerialized]
         public static System.Windows.Forms.Control GuiContainer = null;
+
+        /// <summary>
+        /// Callback that can be executed when the session is reloaded
+        /// </summary>
+        /// [NonSerialized]
+        public Action OnReload;
         #endregion
 
         public static StockSession Start(List<string> sources, List<string> sinkScripts, string executeScript)
         {
             StockSession session = new StockSession();
 
-            List<string> script = new List<string>();
+            session.Scripts.Clear();
             Directory.CreateDirectory("tmp");
 
             // Convert any legacy files before further processing
@@ -109,14 +127,14 @@ namespace RobinhoodDesktop.Script
             }
 
             session.SourceFile = StockDataFile.Open(sources.ConvertAll<Stream>((s) => { return new FileStream(s, FileMode.Open); }));
-            script.Add("tmp/" + SOURCE_CLASS + ".cs");
-            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(session.SourceFile.GetSourceCode(SOURCE_CLASS));
+            session.Scripts.Add("tmp/" + SOURCE_CLASS + ".cs");
+            using(var file = new StreamWriter(new FileStream(session.Scripts.Last(), FileMode.Create))) file.Write(session.SourceFile.GetSourceCode(SOURCE_CLASS));
 
             session.SinkFile = new StockDataFile(sinkScripts.ConvertAll<string>((f) => { return Path.GetFileNameWithoutExtension(f); }), sinkScripts.ConvertAll<string>((f) => { return File.ReadAllText(f); }));
             session.SinkFile.Interval = session.SourceFile.Interval;
-            script.Add("tmp/" + SINK_CLASS + ".cs");
-            using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(session.SinkFile.GenStockDataSink());
-            script.AddRange(sinkScripts);
+            session.Scripts.Add("tmp/" + SINK_CLASS + ".cs");
+            using(var file = new StreamWriter(new FileStream(session.Scripts.Last(), FileMode.Create))) file.Write(session.SinkFile.GenStockDataSink());
+            session.Scripts.AddRange(sinkScripts);
 
             // Create the evaluator file (needs to be compiled in the script since it references StockDataSource)
             string[] embeddedFiles = new string[]
@@ -126,51 +144,23 @@ namespace RobinhoodDesktop.Script
             };
             foreach(var f in embeddedFiles)
             {
-                script.Add(string.Format("tmp/{0}.cs", f.Substring(24, f.Length - 27)));
+                session.Scripts.Add(string.Format("tmp/{0}.cs", f.Substring(24, f.Length - 27)));
                 StringBuilder analyzerCode = new StringBuilder();
                 analyzerCode.Append(new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream(f)).ReadToEnd());
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(StockDataFile.FormatSource(analyzerCode.ToString()));
+                using(var file = new StreamWriter(new FileStream(session.Scripts.Last(), FileMode.Create))) file.Write(StockDataFile.FormatSource(analyzerCode.ToString()));
             }
 
             // Add the user defined analyzers
-            foreach(string path in Directory.GetFiles(@"Script/Decision", "*.cs", SearchOption.AllDirectories)) script.Add(path);
-            foreach(string path in Directory.GetFiles(@"Script/Action", "*.cs", SearchOption.AllDirectories)) script.Add(path);
+            foreach(string path in Directory.GetFiles(@"Script/Decision", "*.cs", SearchOption.AllDirectories)) session.Scripts.Add(path);
+            foreach(string path in Directory.GetFiles(@"Script/Action", "*.cs", SearchOption.AllDirectories)) session.Scripts.Add(path);
 
             // Get the code that will actually run the session
-            script.Add(executeScript);
+            if(!string.IsNullOrEmpty(executeScript)) session.Scripts.Add(executeScript);
 
             // Build and run the session
-#if DEBUG
-            var isDebug = true;
-#else
-                var isDebug = false;
-#endif
-            try
-            {
-                if(!string.IsNullOrEmpty(executeScript))
-                {
-                    CSScript.EvaluatorConfig.Engine = EvaluatorEngine.Mono;
-                    CSScript.MonoEvaluator.CompilerSettings.Platform = Mono.CSharp.Platform.X64;
-                    session.ScriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug, "TensorFlow.NET.dll", 
-                                                                                                 "Google.Protobuf.dll",
-                                                                                                 "Newtonsoft.Json",
-                                                                                                 "NumSharp.Lite", 
-                                                                                                 "netstandard", 
-                                                                                                 "System.Memory", 
-                                                                                                 "System.Numerics");
-                    var getProcessor = session.ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockProcessor.GetInstance", session);
-                    var processor = getProcessor(session);
-                    var run = session.ScriptInstance.GetStaticMethod("*.Run", session);
-                    System.Threading.Tasks.Task.Run(() => { run(session); });
-                }
-            }
-            catch(Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show(ex.ToString());
-                session.SourceFile.Close();
-                session.SinkFile.Close();
-            }
+            session.LoadScripts(true);
 
+            StockSession.Instance = session;
             return session;
         }
 
@@ -181,11 +171,10 @@ namespace RobinhoodDesktop.Script
         /// <param name="sinkScripts">The data processors to apply</param>
         public static void AddChart(List<string> sources, List<string> sinkScripts)
         {
-            var session = Start(sources, sinkScripts, "Script/ChartScript.cs");
+            var session = (Instance != null) ? Instance : Start(sources, sinkScripts, "");
             try
             {
-                var createChart = session.ScriptInstance.GetStaticMethod("*.CreateChart", session);
-                var ctrl = (System.Windows.Forms.Control)createChart(session);
+                var ctrl = (System.Windows.Forms.Control)(new DataChartGui(session.Data, session).GuiPanel);
                 if((ctrl != null) && (AddToGui != null))
                 {
                     AddToGui(ctrl);
@@ -197,154 +186,73 @@ namespace RobinhoodDesktop.Script
             }
         }
 
-        public void Run()
+        /// <summary>
+        /// Reloads the scripts and executes them
+        /// </summary>
+        public void Reload()
         {
-            System.Windows.Forms.OpenFileDialog diag = new System.Windows.Forms.OpenFileDialog();
-            diag.Multiselect = true;
-            diag.Title = "Open Stock Data File...";
-            if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            // Close any previously open script
+            if(ScriptInstance != null)
             {
-                List<string> script = new List<string>();
-                Directory.CreateDirectory("tmp");
-
-                // Get the source file
-                if(diag.FileName.EndsWith(".csv"))
-                {
-                    System.Windows.Forms.SaveFileDialog saveDiag = new System.Windows.Forms.SaveFileDialog();
-                    if(saveDiag.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-
-                    SourceFile = StockDataFile.Convert(diag.FileNames.ToList(), new FileStream(saveDiag.FileName, FileMode.Create));
-                }
-                else
-                {
-                    SourceFile = StockDataFile.Open(new FileStream(diag.FileName, FileMode.Open));
-                }
-                script.Add("tmp/" + SOURCE_CLASS + ".cs");
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SourceFile.GetSourceCode(SOURCE_CLASS));
-
-                // Create the sink file
-                //SinkFile = new StockDataFile(new List<string>() { }, new List<string>() {  });
-                SinkFile = new StockDataFile(new List<string>() { "MovingAverage" }, new List<string>() { File.ReadAllText(@"Script/Data/MovingAverage.cs") });
-                script.Add("tmp/" + SINK_CLASS + ".cs");
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SinkFile.GetSourceCode(SINK_CLASS));
-
-                // Create the analyzer file (needs to be compiled in the script since it references StockDataSource)
-                var analyzerFilename = "RobinhoodDesktop.Script.StockAnalyzer.cs";
-                script.Add("tmp/StockAnalyzer.cs");
-                StringBuilder analyzerCode = new StringBuilder();
-                analyzerCode.Append(new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream(analyzerFilename)).ReadToEnd());
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(StockDataFile.FormatSource(analyzerCode.ToString()));
-
-                // Add the user defined analyzers
-                string[] analyzerPaths = Directory.GetFiles(@"Script/Decision", "*.cs", SearchOption.AllDirectories);
-                foreach(string path in analyzerPaths) script.Add(path);
-
-
-                // Get the code that will actually run the session
-                script.Add("tmp/StockSessionScript.cs");
-                var sessionFilename = "RobinhoodDesktop.Script.StockSessionScript.cs";
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream(sessionFilename)).ReadToEnd());
-
-                // Build and run the session
-#if DEBUG
-                var isDebug = true;
-#else
-                var isDebug = false;
-#endif
-#if true
-                try
-                {
-                    var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
-                    var run = scriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockSessionScript.Run", this);
-                    run(this);
-                }
-                catch(Exception ex)
-                {
-                    System.Windows.Forms.MessageBox.Show(ex.ToString());
-                }
-#else
-                // Set up the derived data sink
-                var sourceData = SourceFile.GetSegments<StockDataBase>();
-                var sinkData = StockDataSetDerived<StockDataBase, StockDataBase>.Derive(sourceData, SinkFile, (data, idx) =>
-                {
-                    var point = new StockDataBase();
-                    point.Update(data, idx);
-                    return point;
-                });
-                SinkFile.SetSegments(sinkData);
-
-                // Load the first set of data
-                foreach(var pair in sinkData)
-                {
-                    foreach(var set in pair.Value)
-                    {
-                        set.Load();
-                    }
-                }
-#endif
-
-                // Cleanup
-                SourceFile.Close();
+                ScriptInstance.UnloadOwnerDomain();
+                ScriptInstance = null;
             }
+            Data = null;
+            SourceFile.Reload();
+            SinkFile.Reload();
 
+            // Re-load the scripts, pulling in any recent changes
+            LoadScripts();
+
+            // Execute the reload callback
+            OnReload();
         }
 
-
-        public void RunSession()
+        /// <summary>
+        /// Loads a script instance
+        /// </summary>
+        /// <param name="run">If true, searches for a "run" method in the script and executes it</param>
+        private void LoadScripts(bool run = false)
         {
-            System.Windows.Forms.OpenFileDialog diag = new System.Windows.Forms.OpenFileDialog();
-            diag.Multiselect = false;
-            diag.Title = "Run Session Script...";
-            if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                List<string> script = new List<string>();
-                Directory.CreateDirectory("tmp");
-
-                SourceFile = new StockDataFile(new List<string>() { }, new List<string>() { });
-                script.Add("tmp/" + SOURCE_CLASS + ".cs");
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SourceFile.GetSourceCode(SOURCE_CLASS));
-
-                SinkFile = new StockDataFile(new List<string>() { "MovingAverage" }, new List<string>() { File.ReadAllText(@"Script/Data/MovingAverage.cs") });
-                script.Add("tmp/" + SINK_CLASS + ".cs");
-                using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(SinkFile.GetSourceCode(SINK_CLASS));
-
-                // Create the evaluator file (needs to be compiled in the script since it references StockDataSource)
-                string[] embeddedFiles = new string[]
-                {
-                    "RobinhoodDesktop.Script.StockEvaluator.cs",
-                    "RobinhoodDesktop.Script.StockProcessor.cs"
-                };
-                foreach(var f in embeddedFiles)
-                {
-                    script.Add(string.Format("tmp/{0}.cs", f.Substring(24, f.Length - 27)));
-                    StringBuilder analyzerCode = new StringBuilder();
-                    analyzerCode.Append(new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream(f)).ReadToEnd());
-                    using(var file = new StreamWriter(new FileStream(script.Last(), FileMode.Create))) file.Write(StockDataFile.FormatSource(analyzerCode.ToString()));
-                }
-
-                // Add the user defined analyzers
-                foreach(string path in Directory.GetFiles(@"Script/Decision", "*.cs", SearchOption.AllDirectories)) script.Add(path);
-                foreach(string path in Directory.GetFiles(@"Script/Action", "*.cs", SearchOption.AllDirectories)) script.Add(path);
-
-                // Get the code that will actually run the session
-                script.Add(diag.FileName);
-
-                // Build and run the session
 #if DEBUG
-                var isDebug = true;
+            var isDebug = true;
 #else
-                var isDebug = false;
+            var isDebug = false;
 #endif
-                try
+
+            try
+            {
+                CSScript.EvaluatorConfig.Engine = EvaluatorEngine.Mono;
+                CSScript.MonoEvaluator.CompilerSettings.Platform = Mono.CSharp.Platform.X64;
+                ScriptInstance = CSScript.LoadFiles(Scripts.ToArray(), null, isDebug, "TensorFlow.NET.dll",
+                                                                                                "Google.Protobuf.dll",
+                                                                                                "Newtonsoft.Json",
+                                                                                                "NumSharp.Lite",
+                                                                                                "netstandard",
+                                                                                                "System.Memory",
+                                                                                                "System.Numerics");
+
+                // Create and get the StockProcessor instance, which also populates the Data field in the session
+                var getProcessor = ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.StockProcessor.GetInstance", this);
+                var processor = getProcessor(this);
+
+                // Check if a "Run" method should be executed
+                if(run)
                 {
-                    var scriptInstance = CSScript.LoadFiles(script.ToArray(), null, isDebug);
-                    var run = scriptInstance.GetStaticMethod("*.Run", this);
-                    run(this);
+
+                    MethodDelegate runFunc = null;
+                    try { runFunc = ScriptInstance.GetStaticMethod("*.Run", this); } catch(Exception ex) { };
+                    if(runFunc != null)
+                    {
+                        System.Threading.Tasks.Task.Run(() => { runFunc(this); });
+                    }
                 }
-                catch(Exception ex)
-                {
-                    System.Windows.Forms.MessageBox.Show(ex.ToString());
-                }
+            }
+            catch(Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(ex.ToString());
+                SourceFile.Close();
+                SinkFile.Close();
             }
         }
     }

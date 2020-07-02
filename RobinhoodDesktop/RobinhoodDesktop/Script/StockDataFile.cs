@@ -68,6 +68,14 @@ namespace RobinhoodDesktop.Script
             this.File = null;
         }
 
+        /// <summary>
+        /// Reloads any script references 
+        /// </summary>
+        public virtual void Reload()
+        {
+            
+        }
+
 #region Stored Data
         /// <summary>
         /// The list of all of the stock symbols contained within the file
@@ -223,6 +231,14 @@ namespace RobinhoodDesktop.Script
                 {
                     s.Close();
                 }
+            }
+
+            /// <summary>
+            /// Reloads any script references 
+            /// </summary>
+            public override void Reload()
+            {
+                this.LoadMethod = null;
             }
 
             /// <summary>

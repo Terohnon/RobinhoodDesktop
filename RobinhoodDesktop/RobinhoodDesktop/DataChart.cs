@@ -15,13 +15,12 @@ namespace RobinhoodDesktop
 {
     public class DataChart
     {
-        public DataChart(Dictionary<string, List<StockDataInterface>> dataSets, StockDataFile file, StockSession session)
+        public DataChart(Dictionary<string, List<StockDataInterface>> dataSets, StockSession session)
         {
-            this.DataSets = dataSets;
-            this.File = file;
+            this.DataSets = session.Data;
             this.Session = session;
-            this.Start = File.Start;
-            this.End = File.End;
+            this.Start = session.SinkFile.Start;
+            this.End = session.SinkFile.End;
 
             // Create the surface used to draw the plot
             Plot = new NPlot.Swf.InteractivePlotSurface2D();
@@ -48,8 +47,8 @@ namespace RobinhoodDesktop
             this.TimeAxis = new TradingDateTimeAxis(Plot.XAxis1);
             TimeAxis.StartTradingTime = new TimeSpan(9, 30, 0);
             TimeAxis.EndTradingTime = new TimeSpan(16, 0, 0);
-            TimeAxis.WorldMin = (double)(file.Start).Ticks;
-            TimeAxis.WorldMax = (double)(file.End).Ticks;
+            TimeAxis.WorldMin = (double)(Start).Ticks;
+            TimeAxis.WorldMax = (double)(End).Ticks;
             Plot.XAxis1 = TimeAxis;
 
             Plot.Refresh();
@@ -99,7 +98,7 @@ namespace RobinhoodDesktop
             /// <summary>
             /// Callback to evaluate the expression on the specified data set
             /// </summary>
-            public MethodDelegate GetValue;
+            public Func<StockDataInterface, int, object> GetValue;
 
             /// <summary>
             /// Indicates if the plot line is locked and should not be updated with the rest when a global change would take place (ex: setting the symbol)
@@ -440,11 +439,6 @@ namespace RobinhoodDesktop
         public Dictionary<string, List<StockDataInterface>> DataSets;
 
         /// <summary>
-        /// The file data is being pulled from
-        /// </summary>
-        public StockDataFile File;
-
-        /// <summary>
         /// The session the chart is part of
         /// </summary>
         public StockSession Session;
@@ -467,7 +461,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// Callback to get the X axis value
         /// </summary>
-        public MethodDelegate XAxisGetValue;
+        public Func<StockDataInterface, int, object> XAxisGetValue;
 
         /// <summary>
         /// The plot surface used to display the chart
@@ -572,14 +566,37 @@ namespace RobinhoodDesktop
         }
 
         /// <summary>
+        /// Can be called when the data loaded into the session has changed
+        /// </summary>
+        public void ReloadData()
+        {
+            this.DataSets = Session.Data;
+            if(Lines.Count > 0)
+            {
+                string prevSymbols = Lines[0].Symbol;
+
+                // Re-load the line and XAxis accessor callbacks
+                foreach(var l in Lines)
+                {
+                    l.Symbol = "";
+                    l.SetExpression(this, l.Expression);
+                }
+                this.SetXAxis(XAxis);
+
+                // Restore the symbols to re-load the data
+                SetPlotLineSymbol(prevSymbols);
+            }
+        }
+
+        /// <summary>
         /// Sets the time range to pull data from
         /// </summary>
         /// <param name="start">The start time</param>
         /// <param name="end">The end time</param>
         public void SetDataRange(DateTime start, DateTime end)
         {
-            Start = (start >= File.Start) ? start : File.Start;
-            End = (end <= File.End) ? end : File.End;
+            Start = (start >= Session.SinkFile.Start) ? start : Session.SinkFile.Start;
+            End = (end <= Session.SinkFile.End) ? end : Session.SinkFile.End;
         }
 
         /// <summary>
@@ -733,7 +750,7 @@ namespace RobinhoodDesktop
         /// </summary>
         /// <param name="expression">The expression to get a value from the dataset</param>
         /// <returns>The delegate used to get the desired value from a dataset</returns>
-        protected MethodDelegate getExpressionEvaluator(string expression)
+        protected Func<StockDataInterface, int, object> getExpressionEvaluator(string expression)
         {
             return DataSets.First().Value.First().GetExpressionEvaluator(expression);
         }

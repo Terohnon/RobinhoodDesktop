@@ -13,7 +13,7 @@ namespace RobinhoodDesktop
 {
     public class DataChartGui : DataChart
     {
-        public DataChartGui(Dictionary<string, List<StockDataInterface>> dataSets, StockDataFile file, StockSession session) : base(dataSets, file, session)
+        public DataChartGui(Dictionary<string, List<StockDataInterface>> dataSets, StockSession session) : base(dataSets, session)
         {
             GuiPanel = new Panel();
             GuiPanel.Size = new System.Drawing.Size(600, 300);
@@ -30,6 +30,7 @@ namespace RobinhoodDesktop
                     pair.Item1.Location = new Point(intervalBtnPos, SymbolTextbox.Top);
                     intervalBtnPos = pair.Item1.Right + 5;
                 }
+                ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width / 2) - 5, 5);
                 XAxisTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), GuiPanel.Height - XAxisTextbox.Height - 10);
             };
             GuiPanel.ParentChanged += (sender, e) =>
@@ -173,6 +174,15 @@ namespace RobinhoodDesktop
             }
             IntervalButtons[0].Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
 
+            // Add the button to reload the session
+            ReloadButton = new GuiButton("Reload");
+            ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width / 2) - 5, 5);
+            ReloadButton.Click += (sender, e) =>
+            {
+                Session.Reload();
+            };
+            GuiPanel.Controls.Add(ReloadButton);
+
             ChartChanged += () =>
             {
                 XAxisTextbox.Text = XAxis;
@@ -188,6 +198,9 @@ namespace RobinhoodDesktop
 
             // Start with one line
             AddPlotLine("Price");
+
+            // Reload the chart when the session is reloaded
+            session.OnReload += ReloadData;
         }
 
         #region Variables
@@ -246,6 +259,11 @@ namespace RobinhoodDesktop
             { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 hr."), new TimeSpan(1, 0, 0)) },
             { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 day."), new TimeSpan(24, 0, 0)) },
         };
+
+        /// <summary>
+        /// Button to reload the script and refresh the chart
+        /// </summary>
+        private GuiButton ReloadButton;
         #endregion
 
         #region Types

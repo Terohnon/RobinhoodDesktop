@@ -41,7 +41,7 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="expression">The expression to get a value from the dataset</param>
         /// <returns>The delegate used to get the desired value from a dataset</returns>
-        MethodDelegate GetExpressionEvaluator(string expression);
+        Func<StockDataInterface, int, object> GetExpressionEvaluator(string expression);
 
         /// <summary>
         /// Returns the number of points in the dataset
