@@ -46,18 +46,6 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         public float Price;
 
-        /// <summary>
-        /// The data set this point is part of
-        /// </summary>
-        [NonSerialized]
-        public StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> DataSet;
-
-        /// <summary>
-        /// The index in the data set
-        /// </summary>
-        [NonSerialized]
-        public int DataIndex;
-
         ///= Members ///
         #endregion
 
@@ -73,8 +61,6 @@ namespace RobinhoodDesktop.Script
         public void Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex)
         {
             this.Price = data.SourceData.DataSet.InternalArray[data.GetSourceIndex(updateIndex)].Price;
-            this.DataSet = data;
-            this.DataIndex = updateIndex;
 
             ///= PartialUpdates ///
         }

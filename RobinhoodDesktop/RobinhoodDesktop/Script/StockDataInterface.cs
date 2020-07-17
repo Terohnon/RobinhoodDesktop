@@ -40,8 +40,9 @@ namespace RobinhoodDesktop.Script
         /// Compiles a script to evaluate the specified expression
         /// </summary>
         /// <param name="expression">The expression to get a value from the dataset</param>
+        /// <param name="session">The session being processed</param>
         /// <returns>The delegate used to get the desired value from a dataset</returns>
-        Func<StockDataInterface, int, object> GetExpressionEvaluator(string expression);
+        Func<StockDataInterface, int, object> GetExpressionEvaluator(string expression, StockSession session);
 
         /// <summary>
         /// Returns the number of points in the dataset

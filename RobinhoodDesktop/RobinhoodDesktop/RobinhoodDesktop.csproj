@@ -305,6 +305,7 @@
     <Compile Include="DataAccessor.cs" />
     <Compile Include="DataChart.cs" />
     <Compile Include="DataChartGui.cs" />
+    <Compile Include="DataChartIterator.cs" />
     <Compile Include="DataTableCache.cs" />
     <Compile Include="GuiButton.cs">
       <SubType>Component</SubType>
@@ -340,6 +341,9 @@
     <Compile Include="Scripting.evaluator.cs" />
     <Compile Include="Scripting.Extensions.cs" />
     <Compile Include="Scripting.native.cs" />
+    <Content Include="Script\Data\DataSetReference.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Compile Include="Script\StockDataBase.cs" />
     <Compile Include="Script\StockDataInterface.cs" />
     <Compile Include="Script\StockDataSetDerived.cs" />

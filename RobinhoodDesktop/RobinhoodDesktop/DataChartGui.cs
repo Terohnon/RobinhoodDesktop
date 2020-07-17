@@ -370,7 +370,7 @@ namespace RobinhoodDesktop
                 // Set the text values based on the cursor position
                 if(Chart.XAxis.Equals("Time"))
                 {
-                    Chart.Lines[0].DataMutex.WaitOne();
+                    if(!Chart.Lines[0].DataMutex.WaitOne(5000)) return false;
                     int idx = Chart.GetDataIndex(mouseVal);
                     if (idx >= 0)
                     {
@@ -524,7 +524,7 @@ namespace RobinhoodDesktop
             fields.AddRange(dataType.GetFields().ToList().ConvertAll((f) => { return f.Name; }));
             fields.AddRange(dataType.GetProperties().ToList().ConvertAll((f) => { return f.Name; }));
             fields.AddRange(dataType.GetMethods().ToList().ConvertAll((f) => { return f.Name; }));
-            var possibleFields = fields.Where((s) => { return s.StartsWith(fieldName); }).ToList();
+            var possibleFields = fields.Where((s) => { return s.StartsWith(fieldName) && (startIdx < search.Length); }).ToList();
             var suggestions = possibleFields.ConvertAll((s) => { return search.Substring(0, startIdx) + s; }).ToArray();
             return suggestions;
         }

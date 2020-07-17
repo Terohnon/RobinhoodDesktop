@@ -200,7 +200,7 @@ namespace RobinhoodDesktop
                 foreach (var s in symbols)
                 {
                     List<StockDataInterface> sources;
-                    if (!source.DataSets.TryGetValue(s, out sources) || (GetValue == null)) break;
+                    if (!source.getDataList(s, out sources) || (GetValue == null)) break;
 
                     // Load the sources first (need to load to the end before accessing the data since loading later sources could backfill data) */
                     for (int i = 0; i < sources.Count; i++) sources[i].Load(source.Session);
@@ -439,6 +439,11 @@ namespace RobinhoodDesktop
         public Dictionary<string, List<StockDataInterface>> DataSets;
 
         /// <summary>
+        /// Stores data to be iterated over
+        /// </summary>
+        public List<StockDataInterface> IterateData;
+
+        /// <summary>
         /// The session the chart is part of
         /// </summary>
         public StockSession Session;
@@ -511,6 +516,7 @@ namespace RobinhoodDesktop
         /// <param name="expression">The name of the parameter to comprise the X axis</param>
         public void SetXAxis(string expression)
         {
+            this.IterateData = null;
             this.XAxis = expression;
             this.XAxisGetValue = getExpressionEvaluator(expression);
             foreach (var l in Lines)
@@ -752,7 +758,30 @@ namespace RobinhoodDesktop
         /// <returns>The delegate used to get the desired value from a dataset</returns>
         protected Func<StockDataInterface, int, object> getExpressionEvaluator(string expression)
         {
-            return DataSets.First().Value.First().GetExpressionEvaluator(expression);
+            Func<StockDataInterface, int, object> accessor;
+
+            // Check if the expression is an iterator
+            if(expression.StartsWith("Iterate("))
+            {
+                var code = expression.Replace("Iterate(", "DataChartIterator.Iterate(");
+                var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf<StockDataInterface>();
+                compiler = compiler.ReferenceAssembly(Session.ScriptInstance.Location);
+                this.IterateData = compiler.LoadDelegate<Func<List<StockDataInterface>>>(
+                    @"using System.Collections.Generic;
+                      using RobinhoodDesktop;
+                      using RobinhoodDesktop.Script;
+                      List<StockDataInterface> GetIterator(){ return " + code + @";}")();
+                ((StockDataSet<DataChartIterator>)IterateData[0]).File = Session.SourceFile;
+                ((StockDataSet<DataChartIterator>)IterateData[0]).Start = Session.SinkFile.Start;
+                accessor = DataChartIterator.GetExpressionEvaluator();
+            }
+            else
+            {
+                StockDataInterface i = (IterateData != null) ? IterateData[0] : DataSets.First().Value.First();
+                accessor = i.GetExpressionEvaluator(expression, this.Session);
+            }
+
+            return accessor;
         }
 
         /// <summary>
@@ -762,6 +791,28 @@ namespace RobinhoodDesktop
         protected Type getDataType()
         {
             return DataSets.First().Value.First().GetDataType();
+        }
+
+        /// <summary>
+        /// Gets the appropriate data set for the given symbol
+        /// </summary>
+        /// <param name="symbol">The stock symbol to get data for</param>
+        /// <param name="data">Output the data set</param>
+        /// <returns>true If a corresponding dataset could be found</returns>
+        protected bool getDataList(string symbol, out List<StockDataInterface> data)
+        {
+            bool found;
+            if(IterateData != null)
+            {
+                data = IterateData;
+                found = true;
+            }
+            else
+            {
+                found = DataSets.TryGetValue(symbol, out data);
+            }
+
+            return found;
         }
     }
 }

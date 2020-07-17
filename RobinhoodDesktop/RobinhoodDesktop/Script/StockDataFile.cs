@@ -723,7 +723,7 @@ namespace RobinhoodDesktop.Script
                 DateTime fileDate = GetDateFromFileName(filename);
                 DateTime fileStart = fileDate.AddHours(9.5);
                 DateTime fileEnd = fileDate.AddHours(16);
-                long delayedOffset = (filename.Contains("goog")) ? 0 : new TimeSpan(0, 16, 0).Ticks;
+                long delayedOffset = (filename.Contains("goog")) ? 0 : new TimeSpan(0, 15, 0).Ticks;
 
                 // Read the initial line of the file to learn which stocks are in the file
                 StreamReader s = new StreamReader(filename);
@@ -756,6 +756,7 @@ namespace RobinhoodDesktop.Script
                         StockDataSet<StockDataBase> newSet = new StockDataSet<StockDataBase>(symbol, fileStart, newFile);
                         newSet.DataSet.Resize(391);
                         fileData.Add(newSet);
+                        if(sets.Count > 0) newSet.Previous = sets[sets.Count - 1];
                         sets.Add(newSet);
                     }
                 }
@@ -785,9 +786,17 @@ namespace RobinhoodDesktop.Script
                             float price;
                             if(float.TryParse(stockPricesStr[i + 1], out price))
                             {
-                                if(price == 0.0f)
+                                // Sometimes the first price is corrupted, so skip it
+                                if((newTime == fileStart)
+                                   //&& ((fileData[i].Previous != null) && (Math.Abs((price / fileData[i][-1].Price) - 1.0f) > 0.01f))
+                                   )
                                 {
-                                    price = fileData[i].Last.Price;
+                                    continue;
+                                }
+
+                                if((price == 0.0f) || (newTime == fileEnd))
+                                {
+                                    price = fileData[i][fileData[i].Count - 1].Price;
                                     if(price == 0.0f)
                                     {
                                         continue;

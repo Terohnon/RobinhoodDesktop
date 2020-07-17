@@ -86,6 +86,12 @@ namespace RobinhoodDesktop.Script
         public DateTime Start;
         public StockDataFile File;
         public long StreamAddress;
+
+        /// <summary>
+        /// The data currently being processed
+        /// </summary>
+        [ThreadStatic]
+        public static List<StockDataSet<T>> ProcessingData;
         public DateTime End
         {
             get { return Start.AddTicks(Interval.Ticks * DataSet.Count); }
@@ -106,7 +112,7 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         public T Last
         {
-            get { return DataSet.InternalArray[DataSet.InternalArray.Count() - 1]; }
+            get { return DataSet.InternalArray[(DataSet.Count > 0) ? DataSet.Count - 1 : 0]; }
         }
 
         /// <summary>
@@ -245,7 +251,7 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="expression">The expression to get a value from the dataset</param>
         /// <returns>The delegate used to get the desired value from a dataset</returns>
-        public Func<StockDataInterface, int, object> GetExpressionEvaluator(string expression)
+        public Func<StockDataInterface, int, object> GetExpressionEvaluator(string expression, StockSession session)
         {
             Func<StockDataSet<T>, int, object> accessor = null;
 
@@ -301,6 +307,7 @@ namespace RobinhoodDesktop.Script
                 // Build the expression into an accessor function
                 //src = "namespace RobinhoodDesktop.Script { public class ExpressionAccessor{ public static object GetValue(StockDataSet<" + typeof(T).Name + "> data, int updateIndex) { return " + src + ";} } }";
                 var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf<T>();
+                compiler = compiler.ReferenceAssembly(session.ScriptInstance.Location);
                 //var script = CSScript.LoadCode(src);
                 //CSScript.Evaluator.
                 //accessor = script.GetStaticMethod("*.*");
