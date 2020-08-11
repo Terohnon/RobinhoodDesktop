@@ -13,6 +13,7 @@ namespace RobinhoodDesktop
         public MenuBar(UserConfig config)
         {
             Algorithm = new AlgorithmScreen(config.AlgorithmScreenConfig);
+            LogIn.deviceToken = config.DeviceToken;
 
             MenuPanel = new Panel();
             MenuPanel.BackColor = Color.White;
@@ -118,7 +119,7 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The screen displayed to allow the user to log in
         /// </summary>
-        public LogInScreen LogIn = new LogInScreen();
+        public LogInForm LogIn = new LogInForm();
 
         /// <summary>
         /// The screen displayed to allow the user to configure the scripts to run

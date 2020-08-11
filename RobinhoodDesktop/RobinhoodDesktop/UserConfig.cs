@@ -36,6 +36,11 @@ namespace RobinhoodDesktop
         public string AuthenticationToken;
 
         /// <summary>
+        /// The device token generated to identify device for future login without 2 factor auth
+        /// </summary>
+        public string DeviceToken;
+
+        /// <summary>
         /// A list of stock symbols being watched. 
         /// This is kept local to this application.
         /// </summary>

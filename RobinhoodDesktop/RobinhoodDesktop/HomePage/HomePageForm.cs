@@ -26,6 +26,12 @@ namespace RobinhoodDesktop.HomePage
             DataAccessor.SetAccessor(new DataTableCache(Robinhood));
             Broker.SetBroker(Robinhood);
 
+            if (String.IsNullOrEmpty(Config.DeviceToken))
+            {
+                Config.DeviceToken = Broker.Instance.GenerateDeviceToken();
+                Config.Save(UserConfig.CONFIG_FILE);
+            }
+
             UIList = new Panel();
             UIList.HorizontalScroll.Maximum = 0;
             UIList.AutoScroll = false;

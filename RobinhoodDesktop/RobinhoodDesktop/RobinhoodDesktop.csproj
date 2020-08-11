@@ -248,6 +248,9 @@
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net461\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -317,7 +320,18 @@
     <Compile Include="HomePage\HomePageForm.Designer.cs">
       <DependentUpon>HomePageForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="LogInScreen.cs" />
+    <Compile Include="Login\LogIn.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Login\LogIn.Designer.cs">
+      <DependentUpon>LogIn.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Login\SMS_Code.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Login\SMS_Code.Designer.cs">
+      <DependentUpon>SMS_Code.cs</DependentUpon>
+    </Compile>
     <Compile Include="MachineLearning\StockML.cs" />
     <Compile Include="MachineLearning\StockMLData.cs" />
     <Compile Include="MenuBar.cs" />
@@ -328,6 +342,9 @@
     <Content Include="Script\Data\MovingAverage.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Login\LogIn.resx">
+      <DependentUpon>LogIn.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Script\StockDataSink.cs" />
     <Content Include="Script\Action\StockAction.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -399,6 +416,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="NPlot\NPlot\NPlot\NPlot.csproj">
+      <Project>{E4B99177-77A3-4C92-B881-A6CB57E3BF89}</Project>
+      <Name>NPlot</Name>
+    </ProjectReference>
     <ProjectReference Include="RobinhoodNet\RobinhoodNet\RobinhoodNet.csproj">
       <Project>{4E7B4836-04A8-47FD-A634-3F99CF388977}</Project>
       <Name>RobinhoodNet</Name>

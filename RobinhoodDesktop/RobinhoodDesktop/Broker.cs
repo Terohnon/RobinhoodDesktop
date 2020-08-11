@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BasicallyMe.RobinhoodNet.DataTypes;
 
 namespace RobinhoodDesktop
 {
@@ -12,6 +13,8 @@ namespace RobinhoodDesktop
         #region Types
         public interface BrokerInterface
         {
+            string GenerateDeviceToken();
+
             /// <summary>
             /// Indicates if the interface is currently logged in to an account
             /// </summary>
@@ -23,7 +26,13 @@ namespace RobinhoodDesktop
             /// </summary>
             /// <param name="username">The account username (email address)</param>
             /// <param name="password">The account password</param>
-            void SignIn(string username, string password);
+            (bool, ChallengeInfo) SignIn(string username, string password, string deviceToken, string challengeID);
+
+            /// <summary>
+            /// Completes signin to an account based on a sms code sent to device
+            /// </summary>
+            /// <param name="id_Code">The six digit sms code sent to device</param>
+            (bool, ChallengeInfo) ChallengeResponse(string id, string id_code);
 
             /// <summary>
             /// Signs in to an account based on a stored token
