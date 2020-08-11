@@ -9,16 +9,23 @@ namespace RobinhoodDesktop.Script
     public partial struct StockDataSink
     {
         /// <summary>
-        /// The data set this point is part of
+        /// The dataset this belongs to
         /// </summary>
         [NonSerialized]
         public StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> DataSet;
 
         /// <summary>
+        /// The index of the data set in the overall list
+        /// </summary>
+        [NonSerialized]
+        public int DataSetIndex;
+
+
+        /// <summary>
         /// The index in the data set
         /// </summary>
         [NonSerialized]
-        public int DataIndex;
+        public int DataPointIndex;
 
         /// <summary>
         /// The main update function which sets all of the member variables based on other source data
@@ -28,7 +35,8 @@ namespace RobinhoodDesktop.Script
         partial void DataSetReference_Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex)
         {
             this.DataSet = data;
-            this.DataIndex = updateIndex;
+            this.DataSetIndex = data.ProcessingState.DataSetIndex;
+            this.DataPointIndex = updateIndex;
         }
     }
 }

@@ -12,6 +12,21 @@ namespace RobinhoodDesktop.Script
         /// Stores the time corresponding to the start time of the last dataset that was processed
         /// </summary>
         public DateTime LastProcessedStartTime;
+
+        /// <summary>
+        /// The data set being processed
+        /// </summary>
+        public List<StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>> DataSet;
+
+        /// <summary>
+        /// The index of the data set currently being processed
+        /// </summary>
+        public int DataSetIndex = 0;
+
+        /// <summary>
+        /// The index of the data point currently being processed
+        /// </summary>
+        public int DataPointIndex = 0;
     }
 
     [Serializable]
@@ -319,6 +334,7 @@ namespace RobinhoodDesktop.Script
         /// <param name="idx">Index in the source data to base the new point off of</param>
         public static void CreateSink(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int idx)
         {
+            data.ProcessingState.DataPointIndex = idx;
             data.DataSet.InternalArray[idx].Update(data, idx);
         }
 
@@ -336,6 +352,7 @@ namespace RobinhoodDesktop.Script
             if(!ProcessingStates.TryGetValue(symbol, out intervals) || (intervals == null))
             {
                 state = new StockProcessingState();
+                state.DataSet = HistoricalData[symbol];
                 ProcessingStates[symbol] = new Dictionary<TimeSpan, StockProcessingState>() { { interval, state } };
             }
             else
@@ -343,19 +360,31 @@ namespace RobinhoodDesktop.Script
                 if(!intervals.TryGetValue(interval, out state) || (state == null))
                 {
                     state = new StockProcessingState();
+                    state.DataSet = HistoricalData[symbol];
                     intervals[interval] = state;
                 }
                 else
                 {
+                    // Assume incrementing to the next data set
+                    state.DataSetIndex++;
+
                     // Check if processing restarted
                     if(start < state.LastProcessedStartTime)
                     {
                         state = new StockProcessingState();
+                        state.DataSet = HistoricalData[symbol];
                         intervals[interval] = state;
                     }
                 }
             }
             state.LastProcessedStartTime = start;
+
+            // Ensure the data set index is correct (should never evaluate to true)
+            if(data != HistoricalData[symbol][state.DataSetIndex])
+            {
+                throw new Exception("Data set index mismatch");
+            }
+
             return state;
         }
 

@@ -180,7 +180,8 @@ namespace RobinhoodDesktop.Script
         /// <returns>True if the DataSet contains all available data</returns>
         public override bool IsReady()
         {
-            return SourceData.IsReady() && (SourceData.DataSet.Count == GetSourceIndex(DataSet.Count));
+            // Ready if the source is empty, or if the index of the last point (adjusted for the interval) is at the end of the source
+            return SourceData.IsReady() && ((SourceData.Count == 0) || (SourceData.DataSet.Count == GetSourceIndex(DataSet.Count)));
         }
 
         /// <summary>

@@ -86,6 +86,7 @@ namespace RobinhoodDesktop.Script
         public DateTime Start;
         public StockDataFile File;
         public long StreamAddress;
+        public bool Loaded = false;
 
         /// <summary>
         /// The data currently being processed
@@ -202,7 +203,7 @@ namespace RobinhoodDesktop.Script
         /// <returns>True if data is available</returns>
         public virtual bool IsReady()
         {
-            return (DataSet.Count > 0);
+            return Loaded;
         }
 
         /// <summary>
@@ -214,6 +215,7 @@ namespace RobinhoodDesktop.Script
             if(!IsReady())
             {
                 File.LoadSegment(this, session);
+                Loaded = true;
             }
         }
 
@@ -225,6 +227,7 @@ namespace RobinhoodDesktop.Script
             if(keep == MemoryScheme.MEM_KEEP_NONE)
             {
                 this.DataSet.Clear();
+                Loaded = false;
             }
         }
 
