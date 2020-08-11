@@ -327,7 +327,9 @@ namespace RobinhoodDesktop
         /// <param name="callback">Callback executed once the search is complete</param>
         public void Search(string symbol, DataAccessor.SearchCallback callback)
         {
-            Client.FindInstrument(symbol).ContinueWith((instrument) => 
+            if(Client.isAuthenticated)
+            {
+                Client.FindInstrument(symbol).ContinueWith((instrument) =>
                 {
                     Dictionary<string, string> searchResult = new Dictionary<string, string>();
                     foreach(var stock in instrument.Result)
@@ -339,6 +341,7 @@ namespace RobinhoodDesktop
                     }
                     callback(searchResult);
                 });
+            }
         }
 
         /// <summary>
@@ -383,27 +386,30 @@ namespace RobinhoodDesktop
         /// <param name="callback">Callback executed after the information has been retrieved</param>
         public void GetStockInfo(string symbol, DataAccessor.StockInfoCallback callback)
         {
-            Client.DownloadQuote(symbol).ContinueWith((results) =>
+            if(Client.isAuthenticated)
             {
-                if(results.IsCompleted && !results.IsFaulted)
+                Client.DownloadQuote(symbol).ContinueWith((results) =>
                 {
-                    // Put the data into a table
-                    var response = results.Result;
-                    DataAccessor.StockInfo info = new DataAccessor.StockInfo()
+                    if(results.IsCompleted && !results.IsFaulted)
                     {
-                        Ask = response.AskPrice,
-                        AskVolume = response.AskSize,
-                        Bid = response.BidPrice,
-                        BidVolume = response.BidSize,
-                        PreviousClose = response.AdjustedPreviousClose
-                    };
+                        // Put the data into a table
+                        var response = results.Result;
+                        DataAccessor.StockInfo info = new DataAccessor.StockInfo()
+                        {
+                            Ask = response.AskPrice,
+                            AskVolume = response.AskSize,
+                            Bid = response.BidPrice,
+                            BidVolume = response.BidSize,
+                            PreviousClose = response.AdjustedPreviousClose
+                        };
 
 
-                    // Send the results back
-                    callback(info);
-                }
-                else callback(new DataAccessor.StockInfo());
-            });
+                        // Send the results back
+                        callback(info);
+                    }
+                    else callback(new DataAccessor.StockInfo());
+                });
+            }
         }
         #endregion
 

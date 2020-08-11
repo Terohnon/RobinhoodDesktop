@@ -1,5 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.props" Condition="Exists('..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.props')" />
+  <Import Project="..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props" Condition="Exists('..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,7 +11,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RobinhoodDesktop</RootNamespace>
     <AssemblyName>RobinhoodDesktop</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
@@ -28,6 +30,8 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -69,59 +73,180 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CSScriptLibrary, Version=3.28.7.0, Culture=neutral, PublicKeyToken=70fcc3d18c749033, processorArchitecture=MSIL">
-      <HintPath>..\packages\CS-Script.bin.3.28.7\lib\net46\CSScriptLibrary.dll</HintPath>
+    <Reference Include="CSScriptLibrary, Version=3.30.0.0, Culture=neutral, PublicKeyToken=70fcc3d18c749033, processorArchitecture=MSIL">
+      <HintPath>..\packages\CS-Script.bin.3.30.0\lib\net46\CSScriptLibrary.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Protobuf, Version=3.11.4.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Protobuf.3.11.4\lib\net45\Google.Protobuf.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.CodeAnalysis, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.CodeAnalysis.Common.2.0.0\lib\netstandard1.3\Microsoft.CodeAnalysis.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.1.1.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.CSharp, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.CodeAnalysis.CSharp.2.0.0\lib\netstandard1.3\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.CodeAnalysis, Version=3.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.CodeAnalysis.Common.3.6.0\lib\netstandard2.0\Microsoft.CodeAnalysis.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.CSharp.Scripting, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.CodeAnalysis.CSharp.Scripting.2.0.0\lib\netstandard1.3\Microsoft.CodeAnalysis.CSharp.Scripting.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp, Version=3.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.CodeAnalysis.CSharp.3.6.0\lib\netstandard2.0\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.Scripting, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.CodeAnalysis.Scripting.Common.2.0.0\lib\netstandard1.3\Microsoft.CodeAnalysis.Scripting.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp.Scripting, Version=3.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.CodeAnalysis.CSharp.Scripting.3.6.0\lib\netstandard2.0\Microsoft.CodeAnalysis.CSharp.Scripting.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.Scripting, Version=3.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.CodeAnalysis.Scripting.Common.3.6.0\lib\netstandard2.0\Microsoft.CodeAnalysis.Scripting.dll</HintPath>
     </Reference>
     <Reference Include="Mono.CSharp, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <HintPath>..\packages\CS-Script.bin.3.28.7\lib\net46\Mono.CSharp.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\CS-Script.bin.3.30.0\lib\net46\Mono.CSharp.dll</HintPath>
     </Reference>
     <Reference Include="NetSerializer, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NetSerializer.4.1.0\lib\net45\NetSerializer.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NPlot, Version=0.9.10.1, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>NPlot\NPlot.dll</HintPath>
+    </Reference>
+    <Reference Include="NumSharp.Lite, Version=0.1.7.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\NumSharp.Lite.0.1.7\lib\netstandard2.0\NumSharp.Lite.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
-    <Reference Include="System.AppContext, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.AppContext.4.3.0\lib\net46\System.AppContext.dll</HintPath>
+    <Reference Include="System.AppContext, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.AppContext.4.3.0\lib\net463\System.AppContext.dll</HintPath>
+      <Private>True</Private>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Collections.Immutable, Version=1.2.5.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.1.7.1\lib\net461\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Console, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Console.4.3.0\lib\net46\System.Console.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Design" />
+    <Reference Include="System.Diagnostics.FileVersionInfo, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Diagnostics.FileVersionInfo.4.3.0\lib\net46\System.Diagnostics.FileVersionInfo.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Diagnostics.StackTrace, Version=4.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Diagnostics.StackTrace.4.3.0\lib\net46\System.Diagnostics.StackTrace.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.4.3.0\lib\net462\System.IO.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.Compression, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.Compression.4.3.0\lib\net46\System.IO.Compression.dll</HintPath>
+      <Private>True</Private>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.IO.FileSystem, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.IO.FileSystem.4.3.0\lib\net46\System.IO.FileSystem.dll</HintPath>
       <Private>True</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.IO.FileSystem.Primitives, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.IO.FileSystem.Primitives.4.3.0\lib\net46\System.IO.FileSystem.Primitives.dll</HintPath>
       <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Linq, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Linq.4.3.0\lib\net463\System.Linq.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Linq.Expressions, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Linq.Expressions.4.3.0\lib\net463\System.Linq.Expressions.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Reflection, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Reflection.4.3.0\lib\net462\System.Reflection.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Reflection.Metadata, Version=1.4.5.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Reflection.Metadata.1.8.1\lib\net461\System.Reflection.Metadata.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime, Version=4.1.1.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.4.3.1\lib\net462\System.Runtime.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.7.1\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Extensions, Version=4.1.1.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.Extensions.4.3.1\lib\net462\System.Runtime.Extensions.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.InteropServices, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.InteropServices.4.3.0\lib\net463\System.Runtime.InteropServices.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Algorithms, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Algorithms.4.3.0\lib\net463\System.Security.Cryptography.Algorithms.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Encoding, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Encoding.4.3.0\lib\net46\System.Security.Cryptography.Encoding.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Primitives, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Primitives.4.3.0\lib\net46\System.Security.Cryptography.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.X509Certificates, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.X509Certificates.4.3.0\lib\net461\System.Security.Cryptography.X509Certificates.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Text.Encoding.CodePages, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encoding.CodePages.4.5.1\lib\net461\System.Text.Encoding.CodePages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.4.7.1\lib\net461\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Thread, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Thread.4.3.0\lib\net46\System.Threading.Thread.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net461\System.ValueTuple.dll</HintPath>
@@ -136,6 +261,31 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.ReaderWriter, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Xml.ReaderWriter.4.3.0\lib\net46\System.Xml.ReaderWriter.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Xml.XmlDocument, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Xml.XmlDocument.4.3.0\lib\net46\System.Xml.XmlDocument.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Xml.XPath, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Xml.XPath.4.3.0\lib\net46\System.Xml.XPath.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Xml.XPath.XDocument, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Xml.XPath.XDocument.4.3.0\lib\net46\System.Xml.XPath.XDocument.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="TensorFlow.NET, Version=0.15.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\TensorFlow.NET.0.15.1\lib\netstandard2.0\TensorFlow.NET.dll</HintPath>
+      <Private>True</Private>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="WindowsFormsIntegration" />
     <Reference Include="System.Net.Http.WebRequest" />
@@ -158,6 +308,7 @@
     <Compile Include="DataAccessor.cs" />
     <Compile Include="DataChart.cs" />
     <Compile Include="DataChartGui.cs" />
+    <Compile Include="DataChartIterator.cs" />
     <Compile Include="DataTableCache.cs" />
     <Compile Include="GuiButton.cs">
       <SubType>Component</SubType>
@@ -181,11 +332,10 @@
     <Compile Include="Login\SMS_Code.Designer.cs">
       <DependentUpon>SMS_Code.cs</DependentUpon>
     </Compile>
+    <Compile Include="MachineLearning\StockML.cs" />
+    <Compile Include="MachineLearning\StockMLData.cs" />
     <Compile Include="MenuBar.cs" />
     <Compile Include="RobinhoodInterface.cs" />
-    <Compile Include="Scripting.evaluator.cs" />
-    <Compile Include="Scripting.Extensions.cs" />
-    <Compile Include="Scripting.native.cs" />
     <Content Include="Content\GUI\Button_Live.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -195,17 +345,24 @@
     <EmbeddedResource Include="Login\LogIn.resx">
       <DependentUpon>LogIn.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Script\StockDataScript.cs" />
+    <EmbeddedResource Include="Script\StockDataSink.cs" />
     <Content Include="Script\Action\StockAction.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Script\Decision\PriceEvaluator.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Script\ChartScript.cs">
+    <Content Include="Script\MachineLearning\MLScript.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Compile Include="Scripting.evaluator.cs" />
+    <Compile Include="Scripting.Extensions.cs" />
+    <Compile Include="Scripting.native.cs" />
+    <Content Include="Script\Data\DataSetReference.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Compile Include="Script\StockDataBase.cs" />
+    <Compile Include="Script\StockDataInterface.cs" />
     <Compile Include="Script\StockDataSetDerived.cs" />
     <EmbeddedResource Include="Script\StockProcessor.cs" />
     <Compile Include="Script\StockSession.cs" />
@@ -328,7 +485,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="netstandard" />
+    <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
+    <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -339,4 +497,13 @@
   </Target>
   -->
   <Import Project="..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SciSharp.TensorFlow.Redist-Windows-GPU.1.15.1\build\netstandard2.0\SciSharp.TensorFlow.Redist-Windows-GPU.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.targets'))" />
+  </Target>
+  <Import Project="..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.targets" Condition="Exists('..\packages\Microsoft.CodeAnalysis.Analyzers.3.0.0\build\Microsoft.CodeAnalysis.Analyzers.targets')" />
 </Project>

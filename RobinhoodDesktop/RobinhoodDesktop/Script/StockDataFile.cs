@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 
+using Newtonsoft.Json;
 using CSScriptLibrary;
 using NetSerializer;
 
@@ -65,6 +66,14 @@ namespace RobinhoodDesktop.Script
         {
             if(this.File != null) this.File.Close();
             this.File = null;
+        }
+
+        /// <summary>
+        /// Reloads any script references 
+        /// </summary>
+        public virtual void Reload()
+        {
+            
         }
 
 #region Stored Data
@@ -209,7 +218,7 @@ namespace RobinhoodDesktop.Script
                 }
 
                 // Generate the source code based on the member list
-                var code = GenSourceCode(fields, sourceFields).Replace("StockDataScript", "StockDataSource");
+                var code = GenSourceCode(fields, sourceFields).Replace("StockDataSink", "StockDataSource");
                 this.SourceCode = code.ToArray();
             }
 
@@ -222,6 +231,14 @@ namespace RobinhoodDesktop.Script
                 {
                     s.Close();
                 }
+            }
+
+            /// <summary>
+            /// Reloads any script references 
+            /// </summary>
+            public override void Reload()
+            {
+                this.LoadMethod = null;
             }
 
             /// <summary>
@@ -257,6 +274,26 @@ namespace RobinhoodDesktop.Script
             }
 
             /// <summary>
+            /// Returns the number of data points in the given segment
+            /// </summary>
+            /// <typeparam name="T">The data point type</typeparam>
+            /// <param name="segment">The segment to check</param>
+            /// <returns>The number of data points in the segment when it is loaded</returns>
+            public override int GetSegmentSize<T>(StockDataSet<T> segment)
+            {
+                int count = 0;
+                for(int s = 0; s < Sources.Count; s++)
+                {
+                    if((Sources[s].Start <= segment.Start) && (Sources[s].End > segment.Start))
+                    {
+                        count = Sources[s].GetSegmentSize<T>(segment);
+                        break;
+                    }
+                }
+                return count;
+            }
+
+            /// <summary>
             /// Generates the source code for the agregator
             /// </summary>
             /// <param name="members">The list of members that should be present in the agregator</param>
@@ -266,7 +303,7 @@ namespace RobinhoodDesktop.Script
             {
                 var code = "";
                 var assembly = Assembly.GetExecutingAssembly();
-                var scriptFilename = "RobinhoodDesktop.Script.StockDataScript.cs";
+                var scriptFilename = "RobinhoodDesktop.Script.StockDataSink.cs";
 
                 using(Stream stream = assembly.GetManifestResourceStream(scriptFilename))
                 using(StreamReader reader = new StreamReader(stream))
@@ -319,7 +356,7 @@ namespace RobinhoodDesktop.Script
                     code = code.Replace("///= Members ///", memberDecl);
                     for(int idx = 0; idx < Sources.Count; idx++)
                     {
-                        code += new string(Sources[idx].SourceCode).Replace("StockDataScript", "Source" + idx.ToString());
+                        code += new string(Sources[idx].SourceCode).Replace("StockDataSink", "Source" + idx.ToString());
                     }
                 }
 
@@ -407,8 +444,25 @@ namespace RobinhoodDesktop.Script
         public virtual void LoadSegment<T>(StockDataSet<T> segment, StockSession session = null) where T : struct, StockData
         {
             FileMutex.WaitOne();
-            segment.DataSet.Initialize(LoadData<T>(segment.Symbol, segment.Start));
+            segment.DataSet.Initialize(LoadData<T>(segment.StreamAddress));
             FileMutex.ReleaseMutex();
+        }
+
+        /// <summary>
+        /// Utility to load an array of data points from the file
+        /// </summary>
+        /// <typeparam name="T">The data point type</typeparam>
+        /// <param name="address">The address in the file stream where the item is located</param>
+        /// <returns>An array of loaded data points</returns>
+        public T[] LoadData<T>(long address) where T : struct, StockData
+        {
+            T[] data = null;
+
+            File.Seek(address, SeekOrigin.Begin);
+            data = Load<T>(File);
+
+            if(data == null) data = new T[0];
+            return data;
         }
 
         /// <summary>
@@ -425,14 +479,34 @@ namespace RobinhoodDesktop.Script
             {
                 if(t.Item1 == start)
                 {
-                    File.Seek(t.Item2, SeekOrigin.Begin);
-                    data = Load<T>(File);
+                    data = LoadData<T>(t.Item2);
                     break;
                 }
             }
 
             if(data == null) data = new T[0];
             return data;
+        }
+
+        /// <summary>
+        /// Returns the number of data points in the given segment
+        /// </summary>
+        /// <typeparam name="T">The data point type</typeparam>
+        /// <param name="segment">The segment to check</param>
+        /// <returns>The number of data points in the segment when it is loaded</returns>
+        public virtual int GetSegmentSize<T>(StockDataSet<T> segment) where T : struct, StockData
+        {
+            int count = 0;
+            foreach(Tuple<DateTime, long> t in this.Segments[segment.Symbol])
+            {
+                if(t.Item1 == segment.Start)
+                {
+                    File.Seek(t.Item2, SeekOrigin.Begin);
+                    count = (File.ReadByte() << 8) | File.ReadByte();
+                    break;
+                }
+            }
+            return count;
         }
 
         /// <summary>
@@ -503,29 +577,28 @@ namespace RobinhoodDesktop.Script
         /// <returns>The script source code</returns>
         public string GetSourceCode(string className)
         {
-            return new string(this.SourceCode).Replace("StockDataScript", className);
+            return new string(this.SourceCode).Replace("StockDataSink", className);
         }
-        
+
         /// <summary>
-        /// Combines the separate source files into a single script
+        /// Generates the source code for the stock data sink corresponding to this file
         /// </summary>
-        /// <param name="sources">The source file contents</param>
-        /// <returns>The generated source code for the stock data file</returns>
-        private string GenSourceCode(List<string> sources)
+        /// <returns>The stock data sink source code</returns>
+        public string GenStockDataSink()
         {
             var code = "";
             var assembly = Assembly.GetExecutingAssembly();
-            var scriptFilename = "RobinhoodDesktop.Script.StockDataScript.cs";
+            var scriptFilename = "RobinhoodDesktop.Script.StockDataSink.cs";
 
-            using(Stream stream = assembly.GetManifestResourceStream(scriptFilename))
-            using(StreamReader reader = new StreamReader(stream))
+            using (Stream stream = assembly.GetManifestResourceStream(scriptFilename))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 code = reader.ReadToEnd();
                 string prototypes = "";
                 string updates = "";
                 string saves = "";
                 string loads = "";
-                foreach(string name in this.Fields)
+                foreach (string name in this.Fields)
                 {
                     prototypes += "partial void " + name + "_Update(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState> data, int updateIndex);\n";
                     prototypes += "static partial void " + name + "_Save(System.IO.Stream file);\n";
@@ -539,6 +612,19 @@ namespace RobinhoodDesktop.Script
                 code = code.Replace("///= PartialSaves ///", saves.Replace("\n", "\n                "));
                 code = code.Replace("///= PartialLoads ///", loads.Replace("\n", "\n                "));
             }
+
+            return code;
+        }
+
+
+        /// <summary>
+        /// Combines the separate source files into a single script
+        /// </summary>
+        /// <param name="sources">The source file contents</param>
+        /// <returns>The generated source code for the stock data file</returns>
+        private string GenSourceCode(List<string> sources)
+        {
+            var code = GenStockDataSink();
 
             for(int srcIdx = 0; srcIdx < sources.Count; srcIdx++)
             {
@@ -579,6 +665,47 @@ namespace RobinhoodDesktop.Script
         }
 
         #region Legacy File Interface
+        private static DateTime GetDateFromFileName(string filename)
+        {
+            int year = int.Parse(filename.Substring(filename.Length - 12, 4));
+            int month = int.Parse(filename.Substring(filename.Length - 8, 2));
+            int day = int.Parse(filename.Substring(filename.Length - 6, 2));
+            return new DateTime(year, month, day);
+        }
+
+        public static List<StockDataFile> ConvertByMonth(List<string> sourceFiles, string destDir, out List<string> filenames)
+        {
+            List<StockDataFile> files = new List<StockDataFile>();
+
+            // Divide the source files into groups based on the month
+            Dictionary<DateTime, List<string>> months = new Dictionary<DateTime, List<string>>();
+            foreach(var f in sourceFiles)
+            {
+                DateTime fTime = GetDateFromFileName(f);
+                DateTime fMonth = new DateTime(fTime.Year, fTime.Month, 1);
+                List<string> monthFiles;
+                if(!months.TryGetValue(fMonth, out monthFiles))
+                {
+                    monthFiles = new List<string>();
+                    months[fMonth] = monthFiles;
+                }
+                monthFiles.Add(f);
+            }
+
+            // Save each file as a month to the destination directory
+            filenames = new List<string>();
+            foreach (var pair in months)
+            {
+                var fname = destDir + "\\" + $"{pair.Key:yyyyMM}.rbn";
+                filenames.Add(fname);
+                var f = Convert(pair.Value, new FileStream(fname, FileMode.Create));
+                files.Add(f);
+                f.Close();
+            }
+
+            return files;
+        }
+
         /// <summary>
         /// Reads the specified data streams, and converts them into a basic stock data file
         /// </summary>
@@ -593,10 +720,7 @@ namespace RobinhoodDesktop.Script
             foreach(string filename in sourceFiles)
             {
                 // Parse the date from the filename
-                int year = int.Parse(filename.Substring(filename.Length - 12, 4));
-                int month = int.Parse(filename.Substring(filename.Length - 8, 2));
-                int day = int.Parse(filename.Substring(filename.Length - 6, 2));
-                DateTime fileDate = new DateTime(year, month, day);
+                DateTime fileDate = GetDateFromFileName(filename);
                 DateTime fileStart = fileDate.AddHours(9.5);
                 DateTime fileEnd = fileDate.AddHours(16);
                 long delayedOffset = (filename.Contains("goog")) ? 0 : new TimeSpan(0, 15, 0).Ticks;
@@ -632,6 +756,7 @@ namespace RobinhoodDesktop.Script
                         StockDataSet<StockDataBase> newSet = new StockDataSet<StockDataBase>(symbol, fileStart, newFile);
                         newSet.DataSet.Resize(391);
                         fileData.Add(newSet);
+                        if(sets.Count > 0) newSet.Previous = sets[sets.Count - 1];
                         sets.Add(newSet);
                     }
                 }
@@ -661,9 +786,17 @@ namespace RobinhoodDesktop.Script
                             float price;
                             if(float.TryParse(stockPricesStr[i + 1], out price))
                             {
-                                if(price == 0.0f)
+                                // Sometimes the first price is corrupted, so skip it
+                                if((newTime == fileStart)
+                                   //&& ((fileData[i].Previous != null) && (Math.Abs((price / fileData[i][-1].Price) - 1.0f) > 0.01f))
+                                   )
                                 {
-                                    price = fileData[i].Last.Price;
+                                    continue;
+                                }
+
+                                if((price == 0.0f) || (newTime == fileEnd))
+                                {
+                                    price = fileData[i][fileData[i].Count - 1].Price;
                                     if(price == 0.0f)
                                     {
                                         continue;

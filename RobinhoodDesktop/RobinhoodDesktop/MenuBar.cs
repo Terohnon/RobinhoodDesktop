@@ -224,7 +224,7 @@ namespace RobinhoodDesktop
 
                 this.MouseUp += (sender, e) =>
                 {
-                    new Script.StockSession().RunSession();
+                    //new Script.StockSession().RunSession();
                     menu.Hide();
                 };
             }

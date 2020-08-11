@@ -217,7 +217,7 @@ namespace RobinhoodDesktop
                 var session = Script.StockSession.Start(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts, Cfg.SessionScript);
                 
                 // Cleanup
-                if(session != null) session.SourceFile.Close();
+                //if(session != null) session.SourceFile.Close();
             };
             GuiPanel.Controls.Add(StartButton);
 
@@ -238,17 +238,23 @@ namespace RobinhoodDesktop
                 GuiBox.Location = new System.Drawing.Point(BackButton.Width + 10, 10);
             };
 
+            // Specify the interface that should be used to add a chart to the screen
+            Script.StockSession.AddToGui += (control) =>
+            {
+                if (control != null)
+                {
+                    control.Location = new Point(ChartButton.Location.X, ChartButton.Bottom + 5);
+                    GuiPanel.Controls.Add(control);
+                }
+            };
+            Script.StockSession.GuiContainer = (System.Windows.Forms.Control)GuiPanel;
+
             // Create a button which adds a chart to the screen
             ChartButton = new GuiButton("Add Chart");
             ChartButton.Location = new Point(5, DataFileTextbox.Bottom + 25);
             ChartButton.MouseUp += (sender, e) =>
             {
-                var chart = Script.StockSession.AddChart(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts);
-                if(chart != null)
-                {
-                    chart.Location = new Point(ChartButton.Location.X, ChartButton.Bottom + 5);
-                    GuiPanel.Controls.Add(chart);
-                }
+                Script.StockSession.AddChart(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts);
             };
             GuiPanel.Controls.Add(ChartButton);
         }

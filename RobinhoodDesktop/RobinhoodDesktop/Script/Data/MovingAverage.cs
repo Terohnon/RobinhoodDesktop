@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RobinhoodDesktop.Script
 {
-    public partial struct StockDataScript
+    public partial struct StockDataSink
     {
         /// <summary>
         /// The average over 10 minutes

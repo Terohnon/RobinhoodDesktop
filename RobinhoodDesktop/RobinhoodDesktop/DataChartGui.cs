@@ -11,9 +11,9 @@ using NPlot;
 
 namespace RobinhoodDesktop
 {
-    public class DataChartGui<T> : DataChart<T> where T : struct, StockData
+    public class DataChartGui : DataChart
     {
-        public DataChartGui(Dictionary<string, List<StockDataSet<T>>> dataSets, StockDataFile file, StockSession session) : base(dataSets, file, session)
+        public DataChartGui(Dictionary<string, List<StockDataInterface>> dataSets, StockSession session) : base(dataSets, session)
         {
             GuiPanel = new Panel();
             GuiPanel.Size = new System.Drawing.Size(600, 300);
@@ -30,6 +30,7 @@ namespace RobinhoodDesktop
                     pair.Item1.Location = new Point(intervalBtnPos, SymbolTextbox.Top);
                     intervalBtnPos = pair.Item1.Right + 5;
                 }
+                ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width / 2) - 5, 5);
                 XAxisTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), GuiPanel.Height - XAxisTextbox.Height - 10);
             };
             GuiPanel.ParentChanged += (sender, e) =>
@@ -60,8 +61,8 @@ namespace RobinhoodDesktop
             {
                 if(eventArgs.KeyCode == Keys.Enter)
                 {
-                    SetPlotLineSymbol(SymbolTextbox.Text);
                     SetSymbolInterval();
+                    SetPlotLineSymbol(SymbolTextbox.Text);
                     this.Refresh();
                 }
             };
@@ -163,14 +164,43 @@ namespace RobinhoodDesktop
 
                     // Set the new interval
                     SetSymbolInterval();
+                    foreach (var l in Lines)
+                    {
+                        l.Generate(this);
+                    }
                     Refresh();
                 };
                 GuiPanel.Controls.Add(pair.Item1);
             }
             IntervalButtons[0].Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
 
+            // Add the button to reload the session
+            ReloadButton = new GuiButton("Reload");
+            ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width / 2) - 5, 5);
+            ReloadButton.Click += (sender, e) =>
+            {
+                Session.Reload();
+            };
+            GuiPanel.Controls.Add(ReloadButton);
+
+            ChartChanged += () =>
+            {
+                XAxisTextbox.Text = XAxis;
+                foreach (var l in Lines)
+                {
+                    if (!l.Locked)
+                    {
+                        SymbolTextbox.Text = l.Symbol;
+                        break;
+                    }
+                }
+            };
+
             // Start with one line
-            AddPlotLine();
+            AddPlotLine("Price");
+
+            // Reload the chart when the session is reloaded
+            session.OnReload += ReloadData;
         }
 
         #region Variables
@@ -229,12 +259,17 @@ namespace RobinhoodDesktop
             { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 hr."), new TimeSpan(1, 0, 0)) },
             { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 day."), new TimeSpan(24, 0, 0)) },
         };
+
+        /// <summary>
+        /// Button to reload the script and refresh the chart
+        /// </summary>
+        private GuiButton ReloadButton;
         #endregion
 
         #region Types
         private class HoverInteraction : NPlot.Interaction
         {
-            public HoverInteraction(DataChartGui<T> chart)
+            public HoverInteraction(DataChartGui chart)
             {
                 this.Chart = chart;
                 Lines = new LineDrawer();
@@ -276,7 +311,7 @@ namespace RobinhoodDesktop
             /// <summary>
             /// The chart the interaction should update
             /// </summary>
-            public DataChartGui<T> Chart;
+            public DataChartGui Chart;
 
             /// <summary>
             /// The percentage from the current price at which the min and max guidelines should be drawn
@@ -329,37 +364,51 @@ namespace RobinhoodDesktop
             /// <returns></returns>
             public override bool DoMouseMove(int X, int Y, Modifier keys, InteractivePlotSurface2D ps)
             {
+                if ((Chart.Lines.Count == 0) || (Chart.Plot.PhysicalXAxis1Cache == null)) return false;
                 double mouseVal = Chart.Plot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false);
-                int idx = Chart.GetDataIndex(mouseVal);
-                if(idx >= 0)
+                
+                // Set the text values based on the cursor position
+                if(Chart.XAxis.Equals("Time"))
                 {
-                    // Set the text values based on the cursor position
-                    if(Chart.XAxis.Equals("Time"))
+                    if(!Chart.Lines[0].DataMutex.WaitOne(5000)) return false;
+                    int idx = Chart.GetDataIndex(mouseVal);
+                    if (idx >= 0)
                     {
                         Chart.XAxisValue.Text = string.Format("{0:t} {0:MMM d} '{0:yy}", Chart.Lines[0].Data.Rows[idx][Chart.XAxis]);
                     }
-                    else
-                    {
-                        Chart.XAxisValue.Text = NPlot.Utils.ToDouble(Chart.Lines[0].Data.Rows[idx][Chart.XAxis]).ToString();
-                    }
-                    for(int i = 0; i < Chart.Lines.Count; i++)
+                    Chart.Lines[0].DataMutex.ReleaseMutex();
+                    for (int i = 0; i < Chart.Lines.Count; i++)
                     {
                         Chart.PlotLineLabels[i].Text = Chart.Lines[i].PrintValue(idx);
                     }
-
-                    // Draw the line on the chart to show the cursor position
-                    using(System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
-                    {
-                        PhysicalAxis yAxis = Chart.Plot.PhysicalYAxis1Cache;
-                        g.Clear(System.Drawing.Color.Transparent);
-
-                        // Draw the line
-                        g.DrawLine(Lines.TimePen, X, yAxis.PhysicalMin.Y, X, yAxis.PhysicalMax.Y);
-                    }
-
-                    // Refresh the canvas to display the updated lines
-                    Chart.Plot.Canvas.Refresh();
+                        
                 }
+                else
+                {
+                    Chart.XAxisValue.Text = mouseVal.ToString();
+                    for (int i = 0; i < Chart.Lines.Count; i++)
+                    {
+                        if (Chart.Lines[i].Plot != null)
+                        {
+                            Chart.PlotLineLabels[i].Text = Chart.Lines[i].Plot.PlotYAxis.PhysicalToWorld(new System.Drawing.Point(X, Y),
+                                                                                                         Chart.Plot.PhysicalYAxis1Cache.PhysicalMin,
+                                                                                                         Chart.Plot.PhysicalYAxis1Cache.PhysicalMax, false).ToString();
+                        }
+                    }
+                }
+
+                // Draw the line on the chart to show the cursor position
+                using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
+                {
+                    PhysicalAxis yAxis = Chart.Plot.PhysicalYAxis1Cache;
+                    g.Clear(System.Drawing.Color.Transparent);
+
+                    // Draw the line
+                    g.DrawLine(Lines.TimePen, X, yAxis.PhysicalMin.Y, X, yAxis.PhysicalMax.Y);
+                }
+
+                // Refresh the canvas to display the updated lines
+                Chart.Plot.Canvas.Refresh();
 
                 return false;
             }
@@ -470,7 +519,12 @@ namespace RobinhoodDesktop
         {
             int startIdx = Math.Max(search.LastIndexOfAny(new char[] { ' ', ',', '+', '-', '*', '/', '(', ')', '.', '!', '^', '&', '|' }) + 1, 0);
             string fieldName = search.Substring(startIdx);
-            var possibleFields = GetFields().Where((s) => { return s.StartsWith(fieldName); }).ToList();
+            Type dataType = getDataType();
+            var fields = new List<string>();
+            fields.AddRange(dataType.GetFields().ToList().ConvertAll((f) => { return f.Name; }));
+            fields.AddRange(dataType.GetProperties().ToList().ConvertAll((f) => { return f.Name; }));
+            fields.AddRange(dataType.GetMethods().ToList().ConvertAll((f) => { return f.Name; }));
+            var possibleFields = fields.Where((s) => { return s.StartsWith(fieldName) && (startIdx < search.Length); }).ToList();
             var suggestions = possibleFields.ConvertAll((s) => { return search.Substring(0, startIdx) + s; }).ToArray();
             return suggestions;
         }
@@ -494,7 +548,7 @@ namespace RobinhoodDesktop
         private void SetSymbolInterval()
         {
             TimeSpan span = IntervalButtons.Where((i) => { return i.Item1.Image == GuiButton.ButtonImages[(int)GuiButton.ButtonImage.GREEN_WHITE]; }).First().Item2;
-            List<StockDataSet<T>> symbolDataSets;
+            List<StockDataInterface> symbolDataSets;
             List<string> symbols = GetSymbolList(SymbolTextbox.Text);
             foreach(var symbol in symbols)
             {
@@ -502,7 +556,7 @@ namespace RobinhoodDesktop
                 {
                     foreach(var s in symbolDataSets)
                     {
-                        s.Interval = span;
+                        s.SetInterval(span);
                     }
                 }
             }
@@ -511,10 +565,9 @@ namespace RobinhoodDesktop
         /// <summary>
         /// Adds a new line to the plot
         /// </summary>
-        private void AddPlotLine()
+        public void AddPlotLine(string expression = "")
         {
-            var fields = GetFields();
-            var plot = this.AddPlot(SymbolTextbox.Text, fields[Math.Min(PlotLineTextboxes.Count, fields.Count - 1)]);
+            var plot = this.AddPlot(SymbolTextbox.Text, expression);
             BorderTextBox plotTextbox = new BorderTextBox();
             plotTextbox.BorderColor = plot.Color;
             plotTextbox.Text = plot.Expression;
@@ -534,19 +587,19 @@ namespace RobinhoodDesktop
                         this.PlotLineTextboxes.Remove(t);
                         this.GuiPanel.Controls.Remove(t);
                         PackPlotTextboxes();
-                        this.Refresh();
                     }
                     else
                     {
                         try {
                             plot.SetExpression(this, plotTextbox.Text);
                             ErrorMessageLabel.Visible = false;
+                            plotTextbox.BorderColor = plot.Color;
                         } catch(Exception ex) {
                             ErrorMessageLabel.Text = ex.ToString();
                             ErrorMessageLabel.Visible = true;
                         }
                     }
-                    this.Refresh();
+                    Plot.Refresh();
                 }
             };
             plotTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;
@@ -633,6 +686,11 @@ namespace RobinhoodDesktop
             this.PlotLineLabels.Add(plotLabel);
             this.GuiPanel.Controls.Add(plotLabel);
             plotLabel.BringToFront();
+
+            // Register a callback to update the GUI if the plot's expression is changed via a script
+            plot.ExpressionChanged += (line) => {
+                plotTextbox.Text = line.Expression;
+            };
 
             PackPlotTextboxes();
             this.Refresh();

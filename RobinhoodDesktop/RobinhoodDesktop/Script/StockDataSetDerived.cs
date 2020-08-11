@@ -54,11 +54,28 @@ namespace RobinhoodDesktop.Script
         /// <typeparam name="U">The base data point type</typeparam>
         /// <typeparam name="V">The processing state type</typeparam>
         /// <param name="segments">The set of segments to specify for this file</param>
-        public static Dictionary<string, List<StockDataSet<T>>> CastToBase<T, U, V>(Dictionary<string, List<StockDataSetDerived<T, U, V>>> segments) where T : struct, StockData where U : struct, StockData
+        public static Dictionary<string, List<StockDataSet<T>>> CastToBase(Dictionary<string, List<StockDataSetDerived<T, U, V>>> segments)
         {
             Dictionary<string, List<StockDataSet<T>>> castedSeg = segments.Cast<KeyValuePair<string, List<StockDataSetDerived<T, U, V>>>>().ToDictionary(
                 (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return (string)pair.Key; },
                 (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return pair.Value.ConvertAll((x) => { return (StockDataSet<T>)x; }); }
+            );
+            return castedSeg;
+        }
+
+        /// <summary>
+        /// Sets the stock data segments which are present in this file
+        /// </summary>
+        /// <typeparam name="T">The derived data point type</typeparam>
+        /// <typeparam name="U">The base data point type</typeparam>
+        /// <typeparam name="V">The processing state type</typeparam>
+        /// <param name="segments">The set of segments to specify for this file</param>
+        /// <returns>The data sets as an interface</returns>
+        public static Dictionary<string, List<StockDataInterface>> CastToInterface(Dictionary<string, List<StockDataSetDerived<T, U, V>>> segments)
+        {
+            Dictionary<string, List<StockDataInterface>> castedSeg = segments.Cast<KeyValuePair<string, List<StockDataSetDerived<T, U, V>>>>().ToDictionary(
+                (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return (string)pair.Key; },
+                (KeyValuePair<string, List<StockDataSetDerived<T, U, V>>> pair) => { return pair.Value.ConvertAll((x) => { return (StockDataInterface)x; }); }
             );
             return castedSeg;
         }
@@ -90,10 +107,13 @@ namespace RobinhoodDesktop.Script
         public override TimeSpan Interval
         {
             set {
-                _interval = value;
-                if(DataSet.Count > 0)
+                if (_interval != value)
                 {
-                    DataSet.Clear();
+                    _interval = value;
+                    if (DataSet.Count > 0)
+                    {
+                        DataSet.Clear();
+                    }
                 }
             }
             get { return (_interval != TimeSpan.Zero) ? _interval : File.Interval; }
@@ -110,14 +130,14 @@ namespace RobinhoodDesktop.Script
         /// <summary>
         /// Callback used to create a stock data instance
         /// </summary>
-        public delegate V StockProcessingStateAccessor(StockDataSetDerived<T, U, V> data);
+        public delegate V StockProcessingStateAccessor(StockDataInterface data);
         #endregion
 
         /// <summary>
         /// Loads the data from the source file
         /// <param name="session">The session currently being processed</param>
         /// </summary>
-        public override void Load(StockSession session = null)
+        public override void Load(StockSession session)
         {
             if(!IsReady())
             {
@@ -143,11 +163,15 @@ namespace RobinhoodDesktop.Script
 
         /// <summary>
         /// Clears both the source and the derived data
+        /// <param name="keep">Indicates which data should be kept</param>
         /// </summary>
-        public override void Clear()
+        public override void Clear(MemoryScheme keep = MemoryScheme.MEM_KEEP_NONE)
         {
-            base.Clear();
-            SourceData.Clear();
+            if(keep != MemoryScheme.MEM_KEEP_DERIVED)
+            {
+                base.Clear();
+            }
+            SourceData.Clear(keep);
         }
 
         /// <summary>
@@ -183,6 +207,24 @@ namespace RobinhoodDesktop.Script
                 srcIndex = (int)((Interval.Ticks * index) / SourceData.Interval.Ticks);
             }
             return srcIndex;
+        }
+
+        /// <summary>
+        /// Returns the number of points in the source data set
+        /// </summary>
+        /// <returns>The number of data points</returns>
+        public override int GetSourceCount()
+        {
+            return SourceData.GetSourceCount();
+        }
+
+        /// <summary>
+        /// Returns the type held in the stock data set
+        /// </summary>
+        /// <returns>The data type</returns>
+        public override Type GetDataType()
+        {
+            return typeof(T);
         }
     }
 }
