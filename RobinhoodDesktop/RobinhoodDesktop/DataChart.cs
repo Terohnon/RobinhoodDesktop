@@ -765,7 +765,7 @@ namespace RobinhoodDesktop
             {
                 var code = expression.Replace("Iterate(", "DataChartIterator.Iterate(");
                 var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf<StockDataInterface>();
-                compiler = compiler.ReferenceAssembly(Session.ScriptInstance.Location);
+                foreach (var s in Session.Scripts.Values) compiler = compiler.ReferenceAssembly(s.Location);
                 this.IterateData = compiler.LoadDelegate<Func<List<StockDataInterface>>>(
                     @"using System.Collections.Generic;
                       using RobinhoodDesktop;

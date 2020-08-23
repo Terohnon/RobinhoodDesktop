@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.IO;
 
+using CSScriptLibrary;
+
 namespace RobinhoodDesktop
 {
     public class AlgorithmScreen
@@ -28,6 +30,11 @@ namespace RobinhoodDesktop
             /// List of scripts that analyze the stock point data
             /// </summary>
             public List<string> DataScripts = new List<string>();
+
+            /// <summary>
+            /// The list of scripts for performing various actions
+            /// </summary>
+            public List<string> ActionScripts = new List<string>();
 
             /// <summary>
             /// The most recent path used to open the data script files
@@ -110,6 +117,7 @@ namespace RobinhoodDesktop
             DataFileTextbox.WordWrap = false;
             DataFileTextbox.BackColor = GuiStyle.DARK_GREY;
             DataFileTextbox.ForeColor = GuiStyle.TEXT_COLOR;
+            DataFileTextbox.Font = GuiStyle.Font;
             DataFileTextbox.Text = Cfg.SourceFiles.Replace("\n", "\r\n");
             if(!string.IsNullOrEmpty(DataFileTextbox.Text))
             {
@@ -172,54 +180,75 @@ namespace RobinhoodDesktop
             foreach(var script in Cfg.DataScripts) AddDataScript(script);
             GuiBox.Controls.Add(DataScriptAddButton);
 
-            // Create the GUI to select the decision and result script
-            DecisionScriptTextbox = new TextBox();
-            DecisionScriptTextbox.Location = new Point(DataScriptListPanel.Bounds.Right + 50, DataScriptListPanel.Location.Y);
-            DecisionScriptTextbox.Width = DataScriptListPanel.Width;
-            DecisionScriptTextbox.Multiline = false;
-            DecisionScriptTextbox.WordWrap = false;
-            DecisionScriptTextbox.BackColor = GuiStyle.DARK_GREY;
-            DecisionScriptTextbox.ForeColor = GuiStyle.TEXT_COLOR;
-            GuiBox.Controls.Add(DecisionScriptTextbox);
-            var DecisionScriptButton = new GuiButton("Open...");
-            DecisionScriptButton.Location = new Point(DecisionScriptTextbox.Bounds.Left, DecisionScriptTextbox.Bounds.Top - DecisionScriptButton.Height - 5);
-            DecisionScriptButton.MouseUp += (sender, e) =>
+            // Add the GUI for selecting the data scripts
+            DecisionScriptListPanel = new Panel();
+            DecisionScriptListPanel.Location = new Point(DataScriptListPanel.Bounds.Right + 25, DataScriptListPanel.Location.Y);
+            DecisionScriptListPanel.Size = new Size(450, 150);
+            DecisionScriptListPanel.BorderStyle = BorderStyle.FixedSingle;
+            DecisionScriptListPanel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
+            GuiBox.Controls.Add(DecisionScriptListPanel);
+            Label decisionScriptsLabel = new Label();
+            decisionScriptsLabel.Text = "Action Scripts";
+            decisionScriptsLabel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
+            decisionScriptsLabel.Font = GuiStyle.Font;
+            decisionScriptsLabel.Location = new Point(DecisionScriptListPanel.Bounds.Left, (DecisionScriptListPanel.Bounds.Top - decisionScriptsLabel.Height) + 5);
+            GuiBox.Controls.Add(decisionScriptsLabel);
+            DecisionScriptListScrollbar = new CustomControls.CustomScrollbar();
+            DecisionScriptListScrollbar.Minimum = 0;
+            DecisionScriptListScrollbar.Maximum = DecisionScriptListPanel.Height;
+            DecisionScriptListScrollbar.LargeChange = DecisionScriptListScrollbar.Maximum / DecisionScriptListScrollbar.Height;
+            DecisionScriptListScrollbar.SmallChange = 15;
+            DecisionScriptListScrollbar.Value = 0;
+            DecisionScriptListScrollbar.Attach(DecisionScriptListPanel);
+            GuiBox.Controls.Add(DecisionScriptListScrollbar);
+            DecisionScriptAddButton = new GuiButton("Add...");
+            DecisionScriptAddButton.Location = new Point(DecisionScriptListPanel.Location.X + 5, DecisionScriptListPanel.Bounds.Bottom + 5);
+            DecisionScriptAddButton.MouseUp += (sender, e) =>
+            {
+                DecisionScriptListPanel.Controls.Add(new ScriptTextBox(this, ""));
+            };
+            GuiBox.Controls.Add(DecisionScriptAddButton);
+            DecisionScriptBrowseButton = new GuiButton("Browse...");
+            DecisionScriptBrowseButton.Location = new Point(DecisionScriptAddButton.Right + 5, DecisionScriptAddButton.Bounds.Top);
+            DecisionScriptBrowseButton.MouseUp += (sender, e) =>
             {
                 System.Windows.Forms.OpenFileDialog diag = new System.Windows.Forms.OpenFileDialog();
-                diag.Multiselect = false;
-                diag.Title = "Open Decision Script File...";
+                diag.Multiselect = true;
                 diag.Filter = "C# Files|*.cs";
-                diag.InitialDirectory = Cfg.SessionScriptPath;
-                if(diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                diag.Title = "Open stock data script(s)...";
+                string prevPath = diag.InitialDirectory;
+                diag.InitialDirectory = Cfg.DataScriptPath;
+                diag.RestoreDirectory = false;
+                if (diag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    DecisionScriptTextbox.Text = diag.FileName;
-                    diag.InitialDirectory = Path.GetDirectoryName(diag.FileName);
+                    foreach (string scriptPath in diag.FileNames)
+                    {
+                        Cfg.DataScriptPath = Path.GetDirectoryName(scriptPath);
+
+                        // Skip this item if it has already been loaded
+                        var script = scriptPath;
+                        if (Cfg.DataScripts.Contains(script)) continue;
+
+                        DecisionScriptListPanel.Controls.Add(new ScriptTextBox(this, scriptPath));
+                    }
                 }
             };
-            DecisionScriptTextbox.Text = Cfg.SessionScript;
-            DecisionScriptTextbox.TextChanged += (sender, e) =>
-            {
-                Cfg.SessionScript = DecisionScriptTextbox.Text;
-            };
-            GuiBox.Controls.Add(DecisionScriptButton);
-            Label decisionScriptLabel = new Label();
-            decisionScriptLabel.Text = "Decision Script";
-            decisionScriptLabel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
-            decisionScriptLabel.Font = GuiStyle.Font;
-            decisionScriptLabel.Location = new Point(DecisionScriptTextbox.Bounds.Left, (DecisionScriptButton.Bounds.Top - decisionScriptLabel.Height) + 5);
-            GuiBox.Controls.Add(decisionScriptLabel);
+            GuiBox.Controls.Add(DecisionScriptBrowseButton);
+            
+            foreach (var script in Cfg.ActionScripts) DecisionScriptListPanel.Controls.Add(new ScriptTextBox(this, script));
+
 
             // Create the start button
-            var StartButton = new GuiButton("Start");
-            StartButton.Location = new Point(DecisionScriptTextbox.Bounds.Right + 50, DecisionScriptTextbox.Bounds.Top);
-            StartButton.MouseUp += (sender, e) =>
+            var RunAllButton = new GuiButton("Start");
+            RunAllButton.Location = new Point(DecisionScriptListPanel.Bounds.Right - RunAllButton.Width - 5, DecisionScriptListPanel.Bounds.Top - RunAllButton.Height - 5);
+            RunAllButton.MouseUp += (sender, e) =>
             {
-                var session = Script.StockSession.Start(Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Cfg.DataScripts, Cfg.SessionScript);
-                
-                // Cleanup
-                //if(session != null) session.SourceFile.Close();
+                foreach(var s in Scripts)
+                {
+                    s.Run();
+                }
             };
-            GuiPanel.Controls.Add(StartButton);
+            GuiPanel.Controls.Add(RunAllButton);
 
 
             // Create the back button to leave the screen
@@ -281,6 +310,11 @@ namespace RobinhoodDesktop
         public PictureBox BackButton;
 
         /// <summary>
+        /// The list of scripts
+        /// </summary>
+        public List<ScriptTextBox> Scripts = new List<ScriptTextBox>();
+
+        /// <summary>
         /// A box containing the main GUI elements (to make them easier to re-position)
         /// </summary>
         private Panel GuiBox;
@@ -293,9 +327,147 @@ namespace RobinhoodDesktop
         private Panel DataScriptListPanel;
         private CustomControls.CustomScrollbar DataScriptListScrollbar;
 
-        private TextBox DecisionScriptTextbox;
+        private GuiButton DecisionScriptAddButton;
+        private GuiButton DecisionScriptBrowseButton;
+        private Panel DecisionScriptListPanel;
+        private CustomControls.CustomScrollbar DecisionScriptListScrollbar;
 
         private GuiButton ChartButton;
+        #endregion
+
+        #region Types
+        public class ScriptTextBox : TextBox
+        {
+            public PictureBox CloseButton;
+            private Control PrevParent;
+            private AlgorithmScreen Screen;
+            public ScriptTextBox(AlgorithmScreen screen, string script = "")
+                : base()
+            {
+                this.Screen = screen;
+                this.Text = script;
+                this.BackColor = GuiStyle.DARK_GREY;
+                this.ForeColor = GuiStyle.TEXT_COLOR;
+                this.Font = GuiStyle.Font;
+
+
+                // Add a remove button for the script
+                var CloseButton = new PictureBox();
+                CloseButton.Image = Bitmap.FromFile("Content/GUI/Button_Close.png");
+                CloseButton.Size = new Size(CloseButton.Image.Width, CloseButton.Image.Height);
+                CloseButton.BringToFront();
+                CloseButton.MouseUp += (subSender, subE) =>
+                {
+                    Remove();
+                };
+
+                this.LocationChanged += (sScript, eScript) =>
+                {
+                    CloseButton.Location = new Point(this.Right - 5, this.Top - ((CloseButton.Height - this.Height) / 2));
+                };
+                Resize += (sender, e) =>
+                {
+                    CloseButton.Location = new Point(this.Right, this.Top);
+                };
+                ParentChanged += (sender, e) =>
+                {
+                    if (this.Parent != null)
+                    {
+                        this.Parent.Controls.Add(CloseButton);
+                        this.PrevParent = Parent;
+                        this.Screen.Scripts.Add(this);
+                        Pack();
+                    }
+                    else
+                    {
+                        Remove();
+                    }
+                };
+                KeyDown += (s, eventArgs) =>
+                {
+                     if (eventArgs.KeyCode == Keys.Enter)
+                     {
+                         try
+                         {
+                             if(!string.IsNullOrEmpty(this.Text))
+                             {
+                                // Save the script to the configuration
+                                var idx = Screen.Scripts.IndexOf(this);
+                                if (idx >= Screen.Cfg.ActionScripts.Count) Screen.Cfg.ActionScripts.Insert(idx, this.Text);
+                                else Screen.Cfg.ActionScripts[idx] = this.Text;
+
+                                 // Run the script
+                                 Run();
+                             }
+                             else
+                             {
+                                 Remove();
+                             }
+                         }
+                         catch (Exception ex)
+                         {
+                            System.Windows.Forms.MessageBox.Show(ex.ToString());
+                         }
+                     }
+                };
+            }
+
+            public void Run()
+            {
+                // Ensure the data is loaded
+                if(Script.StockSession.Instance == null)
+                {
+                    Script.StockSession.LoadData(Screen.Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Screen.Cfg.DataScripts);
+                }
+
+                // Check if the specified script is a path to a file
+                if(File.Exists(this.Text))
+                {
+                    Script.StockSession.Instance.Run(this, new List<string>() { this.Text });
+                }
+                else
+                {
+                    // Run the sepcified script and print the results
+                    var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf(this);
+                    foreach (var s in Script.StockSession.Instance.Scripts.Values) compiler = compiler.ReferenceAssembly(s.Location);
+                    var accessor = compiler.LoadDelegate<Func<object>>(@"object GetValue() { return " + this.Text + ";}");
+                    Console.WriteLine(accessor().ToString());
+                }
+            }
+
+
+
+            public void Remove()
+            {
+                if (Parent != null)
+                {
+                    PrevParent = Parent;
+                    Parent.Controls.Remove(this);
+                }
+                if (PrevParent != null)
+                {
+                    PrevParent.Controls.Remove(CloseButton);
+                    this.Screen.Cfg.ActionScripts.RemoveAt(this.Screen.Scripts.IndexOf(this));
+                    this.Screen.Scripts.Remove(this);
+                    Pack();
+                }
+            }
+
+            public void Pack()
+            {
+                // Pack the list to fill the gaps
+                int packPos = 5;
+                foreach (Control c in Screen.DecisionScriptListPanel.Controls)
+                {
+                    if (c.GetType().Equals(typeof(ScriptTextBox)))
+                    {
+                        c.Location = new Point(c.Location.X, packPos);
+                        c.Width = (Screen.DecisionScriptListPanel.Width - c.Left) - 5;
+                        packPos = c.Bounds.Bottom + 5;
+                    }
+                }
+            }
+        }
         #endregion
 
         private void RefreshDataListPanel()

@@ -250,7 +250,7 @@ namespace RobinhoodDesktop.Script
                 for(int idx = 0; idx < Sources.Count; idx++)
                 {
                     var src = Sources[idx];
-                    var loadMethod = session.ScriptInstance.GetStaticMethod("RobinhoodDesktop.Script.Source" + idx + ".Load", src.File);
+                    var loadMethod = session.Scripts[session].GetStaticMethod("RobinhoodDesktop.Script.Source" + idx + ".Load", src.File);
                     src.FileMutex.WaitOne();
                     src.File.Seek(src.LoadAddress, SeekOrigin.Begin);
                     loadMethod(src.File);
@@ -268,7 +268,7 @@ namespace RobinhoodDesktop.Script
             {
                 if((this.LoadMethod == null) && (session != null))
                 {
-                    this.LoadMethod = session.ScriptInstance.GetStaticMethod("*.Load", this, "", DateTime.Now);
+                    this.LoadMethod = session.Scripts[session].GetStaticMethod("*.Load", this, "", DateTime.Now);
                 }
                 segment.DataSet.Initialize((T[])LoadMethod(this, segment.Symbol, segment.Start));
             }
@@ -371,7 +371,7 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         public virtual void LoadStaticData(StockSession session)
         {
-            var loadMethod = session.ScriptInstance.GetStaticMethod("*.Load", File);
+            var loadMethod = session.Scripts[session].GetStaticMethod("*.Load", File);
             FileMutex.WaitOne();
             File.Seek(LoadAddress, SeekOrigin.Begin);
             loadMethod(File);
@@ -559,9 +559,10 @@ namespace RobinhoodDesktop.Script
             headerSer.Serialize(s, this);
 
             // Save any script-specific data
-            if((session != null) && (session.ScriptInstance != null))
+            Assembly dataScript;
+            if((session != null) && session.Scripts.TryGetValue(session, out dataScript))
             {
-                var saveMethod = session.ScriptInstance.GetStaticMethod("*.Save", s);
+                var saveMethod = dataScript.GetStaticMethod("*.Save", s);
                 saveMethod(s);
             }
 
