@@ -204,11 +204,15 @@ namespace RobinhoodDesktop.Script
             Run(this, DataScriptPaths);
 
             // Create and get the StockProcessor instance, which also populates the Data field in the session
-            var getProcessor = Scripts[this].GetStaticMethod("RobinhoodDesktop.Script.StockProcessor.GetInstance", this);
-            var processor = getProcessor(this);
+            Assembly dataScript;
+            if(Scripts.TryGetValue(this, out dataScript))
+            {
+                var getProcessor = dataScript.GetStaticMethod("RobinhoodDesktop.Script.StockProcessor.GetInstance", this);
+                var processor = getProcessor(this);
 
-            // Execute the reload callback
-            OnReload();
+                // Execute the reload callback
+                if(OnReload != null) OnReload();
+            }
         }
 
         /// <summary>

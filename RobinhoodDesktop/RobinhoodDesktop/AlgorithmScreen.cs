@@ -415,7 +415,7 @@ namespace RobinhoodDesktop
             public void Run()
             {
                 // Ensure the data is loaded
-                if(Script.StockSession.Instance == null)
+                if((Script.StockSession.Instance == null) || !Script.StockSession.Instance.Scripts.ContainsKey(Script.StockSession.Instance))
                 {
                     Script.StockSession.LoadData(Screen.Cfg.SourceFiles.Replace("\r", "").Split('\n').ToList(), Screen.Cfg.DataScripts);
                 }
