@@ -51,6 +51,7 @@ namespace RobinhoodDesktop
             TimeAxis.WorldMax = (double)(End).Ticks;
             Plot.XAxis1 = TimeAxis;
 
+            InitPlotColors();
             Plot.Refresh();
         }
 
@@ -486,15 +487,19 @@ namespace RobinhoodDesktop
         /// <summary>
         /// The colors supported for the plot lines
         /// </summary>
-        protected Queue<System.Drawing.Color> PlotLineColors = new Queue<System.Drawing.Color>(new List<System.Drawing.Color>()
+        protected Queue<System.Drawing.Color> PlotLineColors;
+        protected void InitPlotColors()
         {
-            GuiStyle.PRICE_COLOR_POSITIVE,
-            GuiStyle.NOTIFICATION_COLOR,
-            GuiStyle.TEXT_COLOR,
-            GuiStyle.PRICE_COLOR_NEGATIVE,
-            System.Drawing.Color.Violet,
-            System.Drawing.Color.DeepSkyBlue
-        });
+            PlotLineColors = new Queue<System.Drawing.Color>(new List<System.Drawing.Color>()
+            {
+                GuiStyle.PRICE_COLOR_POSITIVE,
+                GuiStyle.NOTIFICATION_COLOR,
+                GuiStyle.TEXT_COLOR,
+                GuiStyle.PRICE_COLOR_NEGATIVE,
+                System.Drawing.Color.Violet,
+                System.Drawing.Color.DeepSkyBlue
+            });
+        }
 
         /// <summary>
         /// Accesses the canvas object for the chart
@@ -555,6 +560,22 @@ namespace RobinhoodDesktop
             }
 
             return newPlot;
+        }
+
+        /// <summary>
+        /// Clears all lines from the plot
+        /// </summary>
+        public virtual void Clear()
+        {
+            // Remove a plot line if it's expression is erased
+            for(PlotLine plot = (this.Lines.Count > 0) ? this.Lines[0] : null; this.Lines.Count > 0; plot = (this.Lines.Count > 0) ? this.Lines[0] : null)
+            {
+                if(plot.Plot != null) plot.Plot.Remove(this);
+                this.Lines.RemoveAt(0);
+            }
+
+            // Reset the colors so they are the same each time
+            InitPlotColors();
         }
 
         /// <summary>
@@ -631,7 +652,7 @@ namespace RobinhoodDesktop
                 {
                     double groupAvg = (groups[j].Item2 + groups[j].Item3) / 2;
                     double groupRange = (groups[j].Item3 - groups[j].Item2) / 2;
-                    double tolerance = 2.0f;
+                    double tolerance = 1.0f;
                     if (((Lines[i].Plot.PlotYAxis.WorldMin > (groupAvg - (groupRange * tolerance))) &&
                          (Lines[i].Plot.PlotYAxis.WorldMax < (groupAvg + (groupRange * tolerance)))) ||
                         (Lines[i].Locked && groups[j].Item1[0].Locked))

@@ -695,6 +695,23 @@ namespace RobinhoodDesktop
             PackPlotTextboxes();
             this.Refresh();
         }
+
+        /// <summary>
+        /// Clears all lines from the plot
+        /// </summary>
+        public override void Clear()
+        {
+            foreach(var t in this.PlotLineTextboxes)
+            {
+                this.GuiPanel.Controls.Remove(t);
+            }
+            this.PlotLineTextboxes.Clear();
+            
+            base.Clear();
+
+            PackPlotTextboxes();
+            this.Refresh();
+        }
     }
 
     public static class ControlExtensions

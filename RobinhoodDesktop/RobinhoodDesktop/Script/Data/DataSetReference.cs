@@ -28,6 +28,14 @@ namespace RobinhoodDesktop.Script
         public int DataPointIndex;
 
         /// <summary>
+        /// Time timestamp of this data point
+        /// </summary>
+        public DateTime Time
+        {
+            get { return DataSet.Time(DataPointIndex); }
+        }
+
+        /// <summary>
         /// The main update function which sets all of the member variables based on other source data
         /// </summary>
         /// <param name="data">The available source data</param>

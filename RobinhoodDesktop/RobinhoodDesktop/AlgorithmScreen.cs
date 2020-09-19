@@ -431,7 +431,8 @@ namespace RobinhoodDesktop
                     var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf(this);
                     foreach (var s in Script.StockSession.Instance.Scripts.Values) compiler = compiler.ReferenceAssembly(s.Location);
                     var accessor = compiler.LoadDelegate<Func<object>>(@"object GetValue() { return " + this.Text + ";}");
-                    Console.WriteLine(accessor().ToString());
+                    object result = accessor();
+                    if(result != null) Console.WriteLine(result.ToString());
                 }
             }
 
@@ -447,7 +448,8 @@ namespace RobinhoodDesktop
                 if (PrevParent != null)
                 {
                     PrevParent.Controls.Remove(CloseButton);
-                    this.Screen.Cfg.ActionScripts.RemoveAt(this.Screen.Scripts.IndexOf(this));
+                    int idx = this.Screen.Scripts.IndexOf(this);
+                    if(idx < this.Screen.Cfg.ActionScripts.Count) this.Screen.Cfg.ActionScripts.RemoveAt(idx);
                     this.Screen.Scripts.Remove(this);
                     Pack();
                 }

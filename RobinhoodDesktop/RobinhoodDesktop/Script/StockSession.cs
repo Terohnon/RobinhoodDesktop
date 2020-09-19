@@ -95,6 +95,11 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// [NonSerialized]
         public Action OnReload;
+
+        /// <summary>
+        /// A list of charts associated with this session
+        /// </summary>
+        public List<DataChartGui> Charts = new List<DataChartGui>();
         #endregion
 
         /// <summary>
@@ -174,21 +179,38 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         /// <param name="sources">The data sources to load</param>
         /// <param name="sinkScripts">The data processors to apply</param>
-        public static void AddChart(List<string> sources, List<string> sinkScripts)
+        public static DataChartGui AddChart(List<string> sources, List<string> sinkScripts)
         {
             var session = (Instance != null) ? Instance : LoadData(sources, sinkScripts);
-            try
+            return session.AddChart();
+        }
+
+        /// <summary>
+        /// Creates a new chart and adds it to the session
+        /// </summary>
+        /// <returns>The created chart</returns>
+        public DataChartGui AddChart()
+        {
+            DataChartGui chart = null;
+            if(this.Data != null)
             {
-                var ctrl = (System.Windows.Forms.Control)(new DataChartGui(session.Data, session).GuiPanel);
-                if((ctrl != null) && (AddToGui != null))
+                try
                 {
-                    AddToGui(ctrl);
+                    chart = new DataChartGui(this.Data, this);
+                    this.Charts.Add(chart);
+                    var ctrl = (System.Windows.Forms.Control)(chart.GuiPanel);
+                    if((ctrl != null) && (AddToGui != null))
+                    {
+                        AddToGui(ctrl);
+                    }
+                }
+                catch(Exception ex)
+                {
+                    System.Windows.Forms.MessageBox.Show(ex.ToString());
                 }
             }
-            catch(Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show(ex.ToString());
-            }
+
+            return chart;
         }
 
         /// <summary>
@@ -260,8 +282,6 @@ namespace RobinhoodDesktop.Script
             catch(Exception ex)
             {
                 System.Windows.Forms.MessageBox.Show(ex.ToString());
-                SourceFile.Close();
-                SinkFile.Close();
             }
         }
     }
