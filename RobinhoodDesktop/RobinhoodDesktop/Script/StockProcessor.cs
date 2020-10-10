@@ -379,12 +379,6 @@ namespace RobinhoodDesktop.Script
             }
             state.LastProcessedStartTime = start;
 
-            // Ensure the data set index is correct (should never evaluate to true)
-            if(data != HistoricalData[symbol][state.DataSetIndex])
-            {
-                throw new Exception("Data set index mismatch");
-            }
-
             return state;
         }
 

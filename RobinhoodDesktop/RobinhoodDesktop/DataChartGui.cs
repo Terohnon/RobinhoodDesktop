@@ -567,133 +567,141 @@ namespace RobinhoodDesktop
         /// </summary>
         public void AddPlotLine(string expression = "")
         {
-            var plot = this.AddPlot(SymbolTextbox.Text, expression);
-            BorderTextBox plotTextbox = new BorderTextBox();
-            plotTextbox.BorderColor = plot.Color;
-            plotTextbox.Text = plot.Expression;
-            plotTextbox.BackColor = GuiStyle.DARK_GREY;
-            plotTextbox.ForeColor = GuiStyle.TEXT_COLOR;
-            plotTextbox.BorderStyle = BorderStyle.Fixed3D;
-            plotTextbox.KeyDown += (s, eventArgs) =>
-            {
-                if(eventArgs.KeyCode == Keys.Enter)
+            ErrorMessageLabel.Visible = false;
+            try { 
+                var plot = this.AddPlot(SymbolTextbox.Text, expression);
+                BorderTextBox plotTextbox = new BorderTextBox();
+                plotTextbox.BorderColor = plot.Color;
+                plotTextbox.Text = plot.Expression;
+                plotTextbox.BackColor = GuiStyle.DARK_GREY;
+                plotTextbox.ForeColor = GuiStyle.TEXT_COLOR;
+                plotTextbox.BorderStyle = BorderStyle.Fixed3D;
+                plotTextbox.KeyDown += (s, eventArgs) =>
                 {
-                    TextBox t = (TextBox)s;
-                    if(t.Text.Length == 0)
+                    if(eventArgs.KeyCode == Keys.Enter)
                     {
-                        // Remove a plot line if it's expression is erased
-                        plot.Plot.Remove(this);
-                        this.Lines.Remove(plot);
-                        this.PlotLineTextboxes.Remove(t);
-                        this.GuiPanel.Controls.Remove(t);
-                        PackPlotTextboxes();
-                    }
-                    else
-                    {
-                        try {
-                            plot.SetExpression(this, plotTextbox.Text);
-                            ErrorMessageLabel.Visible = false;
-                            plotTextbox.BorderColor = plot.Color;
-                        } catch(Exception ex) {
-                            ErrorMessageLabel.Text = ex.ToString();
-                            ErrorMessageLabel.Visible = true;
-                        }
-                    }
-                    Plot.Refresh();
-                }
-            };
-            plotTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;
-            plotTextbox.AutoCompleteSource = AutoCompleteSource.CustomSource;
-            plotTextbox.GotFocus += (sender, e) => {
-                plotTextbox.Width = 800;
-                plotTextbox.BringToFront();
-            };
-            plotTextbox.LostFocus += (sender, e) =>{ plotTextbox.Width = 125; };
-            plotTextbox.Width = 125;
-            plotTextbox.Focus();
-            plotTextbox.TextChanged += (s, eventArgs) =>
-            {
-                if(plotTextbox.Text.Length >= 1)
-                {
-                    // Get the available expressions matching the search string
-                    AutoCompleteStringCollection collection = new AutoCompleteStringCollection();
-                    collection.AddRange(SuggestExpressions(plotTextbox.Text));
-
-                    plotTextbox.AutoCompleteCustomSource = collection;
-                }
-            };
-            plotTextbox.ColorPanel.MouseClick += (sender, e) => {
-                if(e.Button == MouseButtons.Left)
-                {
-                    // Cycle to the next color
-                    PlotLineColors.Enqueue(plot.Color); // Add the previous plot color to the list so it can be re-used
-                    plot.Color = PlotLineColors.Dequeue();
-                    PlotLineColors.Enqueue(plot.Color);   // Add the color to the end of the list so that it can be re-used if needed
-                    plotTextbox.BorderColor = plot.Color;
-                    plot.Locked = false;
-                    plotTextbox.ColorPanel.BorderStyle = BorderStyle.None;
-                }
-                else if(e.Button == MouseButtons.Right)
-                {
-                    // Cycle through transparency
-                    byte[] alphaLevels = { 255, 128, 64, 16 };
-                    for(int i = 0; i < alphaLevels.Length; i++)
-                    {
-                        if(alphaLevels[i] == plot.Color.A)
+                        TextBox t = (TextBox)s;
+                        if(t.Text.Length == 0)
                         {
-                            i = (i + 1) % alphaLevels.Length;
-                            plot.Color = Color.FromArgb(alphaLevels[i], plot.Color);
-                            break;
+                            // Remove a plot line if it's expression is erased
+                            plot.Plot.Remove(this);
+                            this.Lines.Remove(plot);
+                            this.PlotLineTextboxes.Remove(t);
+                            this.GuiPanel.Controls.Remove(t);
+                            PackPlotTextboxes();
+                        }
+                        else
+                        {
+                            try {
+                                plot.SetExpression(this, plotTextbox.Text);
+                                ErrorMessageLabel.Visible = false;
+                                plotTextbox.BorderColor = plot.Color;
+                            } catch(Exception ex) {
+                                ErrorMessageLabel.Text = ex.ToString();
+                                ErrorMessageLabel.Visible = true;
+                            }
+                        }
+                        Plot.Refresh();
+                    }
+                };
+                plotTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;
+                plotTextbox.AutoCompleteSource = AutoCompleteSource.CustomSource;
+                plotTextbox.GotFocus += (sender, e) => {
+                    plotTextbox.Width = 800;
+                    plotTextbox.BringToFront();
+                };
+                plotTextbox.LostFocus += (sender, e) =>{ plotTextbox.Width = 125; };
+                plotTextbox.Width = 125;
+                plotTextbox.Focus();
+                plotTextbox.TextChanged += (s, eventArgs) =>
+                {
+                    if(plotTextbox.Text.Length >= 1)
+                    {
+                        // Get the available expressions matching the search string
+                        AutoCompleteStringCollection collection = new AutoCompleteStringCollection();
+                        collection.AddRange(SuggestExpressions(plotTextbox.Text));
+
+                        plotTextbox.AutoCompleteCustomSource = collection;
+                    }
+                };
+                plotTextbox.ColorPanel.MouseClick += (sender, e) => {
+                    if(e.Button == MouseButtons.Left)
+                    {
+                        // Cycle to the next color
+                        PlotLineColors.Enqueue(plot.Color); // Add the previous plot color to the list so it can be re-used
+                        plot.Color = PlotLineColors.Dequeue();
+                        PlotLineColors.Enqueue(plot.Color);   // Add the color to the end of the list so that it can be re-used if needed
+                        plotTextbox.BorderColor = plot.Color;
+                        plot.Locked = false;
+                        plotTextbox.ColorPanel.BorderStyle = BorderStyle.None;
+                    }
+                    else if(e.Button == MouseButtons.Right)
+                    {
+                        // Cycle through transparency
+                        byte[] alphaLevels = { 255, 128, 64, 16 };
+                        for(int i = 0; i < alphaLevels.Length; i++)
+                        {
+                            if(alphaLevels[i] == plot.Color.A)
+                            {
+                                i = (i + 1) % alphaLevels.Length;
+                                plot.Color = Color.FromArgb(alphaLevels[i], plot.Color);
+                                break;
+                            }
                         }
                     }
-                }
-                Plot.Refresh();
-            };
-            plotTextbox.ColorPanel.MouseDoubleClick += (sender, e) =>
-            {
-                if(e.Button == MouseButtons.Left)
-                {
-                    // Restore the previous color
-                    plot.Color = PlotLineColors.ElementAt(PlotLineColors.Count - 2);
-                    plotTextbox.BorderColor = plot.Color;
-                    plot.Locked = true;
-                    plotTextbox.ColorPanel.BorderStyle = BorderStyle.FixedSingle;
                     Plot.Refresh();
-                }
-            };
-            this.PlotLineTextboxes.Add(plotTextbox);
-            this.GuiPanel.Controls.Add(plotTextbox);
-            Label plotLabel = new Label();
-            plotLabel.ForeColor = GuiStyle.TEXT_COLOR;
-            plotLabel.Font = GuiStyle.Font;
-            plotLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            plotLabel.Size = new Size(110, plotLabel.Height);
-            plotTextbox.ParentChanged += (sender, e) =>
-            {
-                if(plotTextbox.Parent == null)
+                };
+                plotTextbox.ColorPanel.MouseDoubleClick += (sender, e) =>
                 {
-                    this.PlotLineLabels.Remove(plotLabel);
-                    this.GuiPanel.Controls.Remove(plotLabel);
-                }
-            };
-            EventHandler updateLabelLocation = (sender, e) =>
+                    if(e.Button == MouseButtons.Left)
+                    {
+                        // Restore the previous color
+                        plot.Color = PlotLineColors.ElementAt(PlotLineColors.Count - 2);
+                        plotTextbox.BorderColor = plot.Color;
+                        plot.Locked = true;
+                        plotTextbox.ColorPanel.BorderStyle = BorderStyle.FixedSingle;
+                        Plot.Refresh();
+                    }
+                };
+                this.PlotLineTextboxes.Add(plotTextbox);
+                this.GuiPanel.Controls.Add(plotTextbox);
+                Label plotLabel = new Label();
+                plotLabel.ForeColor = GuiStyle.TEXT_COLOR;
+                plotLabel.Font = GuiStyle.Font;
+                plotLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+                plotLabel.Size = new Size(110, plotLabel.Height);
+                plotTextbox.ParentChanged += (sender, e) =>
+                {
+                    if(plotTextbox.Parent == null)
+                    {
+                        this.PlotLineLabels.Remove(plotLabel);
+                        this.GuiPanel.Controls.Remove(plotLabel);
+                    }
+                };
+                EventHandler updateLabelLocation = (sender, e) =>
+                {
+                    plotLabel.Location = new System.Drawing.Point(plotTextbox.Right + 5, plotTextbox.Top);
+                };
+                plotTextbox.LocationChanged += updateLabelLocation;
+                plotTextbox.Resize += updateLabelLocation;
+                updateLabelLocation(null, null);
+                this.PlotLineLabels.Add(plotLabel);
+                this.GuiPanel.Controls.Add(plotLabel);
+                plotLabel.BringToFront();
+
+                // Register a callback to update the GUI if the plot's expression is changed via a script
+                plot.ExpressionChanged += (line) => {
+                    plotTextbox.Text = line.Expression;
+                };
+
+                PackPlotTextboxes();
+                this.Refresh();
+            }
+            catch(Exception ex)
             {
-                plotLabel.Location = new System.Drawing.Point(plotTextbox.Right + 5, plotTextbox.Top);
-            };
-            plotTextbox.LocationChanged += updateLabelLocation;
-            plotTextbox.Resize += updateLabelLocation;
-            updateLabelLocation(null, null);
-            this.PlotLineLabels.Add(plotLabel);
-            this.GuiPanel.Controls.Add(plotLabel);
-            plotLabel.BringToFront();
-
-            // Register a callback to update the GUI if the plot's expression is changed via a script
-            plot.ExpressionChanged += (line) => {
-                plotTextbox.Text = line.Expression;
-            };
-
-            PackPlotTextboxes();
-            this.Refresh();
+                ErrorMessageLabel.Text = ex.ToString();
+                ErrorMessageLabel.Visible = true;
+            }
         }
 
         /// <summary>

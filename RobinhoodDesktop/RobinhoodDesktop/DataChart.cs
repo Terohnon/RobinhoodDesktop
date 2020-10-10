@@ -538,7 +538,24 @@ namespace RobinhoodDesktop
             }
 
             // Select the proper X axis and refresh the plot
-            if (XAxis.Equals("Time")) Plot.XAxis1 = TimeAxis;
+            if(XAxis.Equals("Time"))
+            {
+                var sym = Lines[0].Symbol;
+                DateTime dataStart;
+                DateTime dataEnd;
+                TimeSpan dataInterval;
+                List<StockDataInterface> data;
+                if(!DataSets.TryGetValue(sym, out data))
+                {
+                    data = DataSets.First().Value;
+                }
+                data[0].GetInfo(out sym, out dataStart, out dataInterval);
+                data.Last().GetInfo(out sym, out dataEnd, out dataInterval);
+                dataEnd = dataEnd.AddMinutes(dataInterval.TotalMinutes * data.Last().GetCount());
+                Plot.XAxis1 = TimeAxis;
+                TimeAxis.WorldMin = (double)(Start > dataStart ? Start : dataStart).Ticks;
+                TimeAxis.WorldMax = (double)(End < dataEnd ? End : dataEnd).Ticks;
+            }
             UpdateMinMax();
             Refresh();
             if (ChartChanged != null) ChartChanged();
@@ -631,7 +648,7 @@ namespace RobinhoodDesktop
         /// </summary>
         public void UpdateMinMax()
         {
-            if (Lines[0].Plot == null) return;
+            if((Lines.Count == 0) || (Lines[0].Plot == null)) return;
             foreach (var l in Lines)
             {
                 if (l.Plot != null)
@@ -773,6 +790,15 @@ namespace RobinhoodDesktop
         }
 
         /// <summary>
+        /// Sets the data for the chart to use
+        /// </summary>
+        /// <param name="data">The list of data to use</param>
+        public void SetData(Dictionary<string, List<StockDataInterface>> data)
+        {
+            this.DataSets = data;
+        }
+
+        /// <summary>
         /// Compiles a script to evaluate the specified expression
         /// </summary>
         /// <param name="expression">The expression to get a value from the dataset</param>
@@ -794,6 +820,7 @@ namespace RobinhoodDesktop
                       List<StockDataInterface> GetIterator(){ return " + code + @";}")();
                 ((StockDataSet<DataChartIterator>)IterateData[0]).File = Session.SourceFile;
                 ((StockDataSet<DataChartIterator>)IterateData[0]).Start = Session.SinkFile.Start;
+                ((StockDataSet<DataChartIterator>)IterateData[0]).Loaded = true;
                 accessor = DataChartIterator.GetExpressionEvaluator();
             }
             else
