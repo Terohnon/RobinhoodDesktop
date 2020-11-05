@@ -169,9 +169,11 @@ namespace RobinhoodDesktop.Script
 
             // Build the data
             session.Reload();
-
-            StockSession.Instance = session;
-            return session;
+            if(session.Data != null)
+            {
+                StockSession.Instance = session;
+            }
+            return StockSession.Instance;
         }
 
         /// <summary>

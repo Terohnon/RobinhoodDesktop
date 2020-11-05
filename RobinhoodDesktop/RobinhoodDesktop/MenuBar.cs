@@ -202,6 +202,10 @@ namespace RobinhoodDesktop
                     menu.MenuPanel.Parent.Controls.Add(menu.Algorithm.GuiPanel);
                     menu.MenuPanel.Parent.Controls.SetChildIndex(menu.Algorithm.GuiPanel, 0);
                     menu.Algorithm.GuiPanel.Size = menu.MenuPanel.Parent.Size;
+                    menu.MenuPanel.Parent.Resize += (p, ev) =>
+                    {
+                        menu.Algorithm.GuiPanel.Size = menu.MenuPanel.Parent.Size;
+                    };
                 };
 
                 // Add logic for when the user clicks the back button on the script screen

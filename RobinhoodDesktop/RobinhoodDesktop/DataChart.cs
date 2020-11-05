@@ -502,6 +502,11 @@ namespace RobinhoodDesktop
         }
 
         /// <summary>
+        /// Indicates if the canvas is dirty and should be re-drawn (prevents multiple re-draw calls)
+        /// </summary>
+        protected bool Dirty = false;
+
+        /// <summary>
         /// Accesses the canvas object for the chart
         /// </summary>
         public System.Windows.Forms.Control Canvas
@@ -521,6 +526,7 @@ namespace RobinhoodDesktop
         /// <param name="expression">The name of the parameter to comprise the X axis</param>
         public void SetXAxis(string expression)
         {
+            bool expressionChanged = !XAxis.Equals(expression);
             this.IterateData = null;
             this.XAxis = expression;
             this.XAxisGetValue = getExpressionEvaluator(expression);
@@ -528,7 +534,7 @@ namespace RobinhoodDesktop
             {
                 if(l.Plot != null) l.Plot.Remove(this);
             }
-            Plot.XAxis1 = null;
+            if(expressionChanged) Plot.XAxis1 = null;
             Plot.YAxis1 = null;
 
             // Re-generate all of the data
@@ -538,7 +544,7 @@ namespace RobinhoodDesktop
             }
 
             // Select the proper X axis and refresh the plot
-            if(XAxis.Equals("Time"))
+            if(XAxis.Equals("Time") && (Lines.Count > 0))
             {
                 var sym = Lines[0].Symbol;
                 DateTime dataStart;
@@ -584,6 +590,9 @@ namespace RobinhoodDesktop
         /// </summary>
         public virtual void Clear()
         {
+            // Restore the default data set
+            this.DataSets = Session.Data;
+
             // Remove a plot line if it's expression is erased
             for(PlotLine plot = (this.Lines.Count > 0) ? this.Lines[0] : null; this.Lines.Count > 0; plot = (this.Lines.Count > 0) ? this.Lines[0] : null)
             {
@@ -600,11 +609,16 @@ namespace RobinhoodDesktop
         /// </summary>
         public void Refresh()
         {
+            Dirty = true;
             if (Canvas.IsHandleCreated)
             {
                 Canvas.BeginInvoke((Action)(() =>
                 {
-                    Plot.Refresh();
+                    if(Dirty)
+                    {
+                        Plot.Refresh();
+                        Dirty = false;
+                    }
                 }));
             }
         }
@@ -693,11 +707,11 @@ namespace RobinhoodDesktop
         /// Sets the stock symbol for all plot lines
         /// </summary>
         /// <param name="symbol">The symbol to set</param>
-        public void SetPlotLineSymbol(string symbol)
+        public virtual void SetPlotLineSymbol(string symbol)
         {
             foreach (var l in Lines)
             {
-                if (!l.Locked) l.Symbol = symbol;
+                l.Symbol = symbol;
             }
             this.SetXAxis(XAxis);
         }
@@ -796,6 +810,18 @@ namespace RobinhoodDesktop
         public void SetData(Dictionary<string, List<StockDataInterface>> data)
         {
             this.DataSets = data;
+        }
+
+        /// <summary>
+        /// Sets the range of values on the X axis
+        /// </summary>
+        /// <param name="min">The minimum X value</param>
+        /// <param name="max">The maximum X value</param>
+        public void SetXRange(double min, double max)
+        {
+            if(XAxis.Equals("Time") || (Plot.XAxis1 == null)) Plot.XAxis1 = new LinearAxis();
+            Plot.XAxis1.WorldMin = min;
+            Plot.XAxis1.WorldMax = max;
         }
 
         /// <summary>

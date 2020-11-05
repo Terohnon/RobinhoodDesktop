@@ -714,11 +714,21 @@ namespace RobinhoodDesktop
                 this.GuiPanel.Controls.Remove(t);
             }
             this.PlotLineTextboxes.Clear();
-            
+            this.SymbolTextbox.Text = "";
             base.Clear();
 
             PackPlotTextboxes();
             this.Refresh();
+        }
+
+        /// <summary>
+        /// Sets the stock symbol for all plot lines
+        /// </summary>
+        /// <param name="symbol">The symbol to set</param>
+        public override void SetPlotLineSymbol(string symbol)
+        {
+            this.SymbolTextbox.Text = symbol;
+            base.SetPlotLineSymbol(symbol);
         }
     }
 
