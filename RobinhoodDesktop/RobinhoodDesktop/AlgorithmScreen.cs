@@ -421,18 +421,21 @@ namespace RobinhoodDesktop
                 }
 
                 // Check if the specified script is a path to a file
-                if(File.Exists(this.Text))
+                if(Script.StockSession.Instance != null)
                 {
-                    Script.StockSession.Instance.Run(this, new List<string>() { this.Text });
-                }
-                else
-                {
-                    // Run the sepcified script and print the results
-                    var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf(this);
-                    foreach (var s in Script.StockSession.Instance.Scripts.Values) compiler = compiler.ReferenceAssembly(s.Location);
-                    var accessor = compiler.LoadDelegate<Func<object>>(@"object GetValue() { return " + this.Text + ";}");
-                    object result = accessor();
-                    if(result != null) Console.WriteLine(result.ToString());
+                    if(File.Exists(this.Text))
+                    {
+                        Script.StockSession.Instance.Run(this, new List<string>() { this.Text });
+                    }
+                    else
+                    {
+                        // Run the sepcified script and print the results
+                        var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf(this);
+                        foreach(var s in Script.StockSession.Instance.Scripts.Values) compiler = compiler.ReferenceAssembly(s.Location);
+                        var accessor = compiler.LoadDelegate<Func<object>>(@"object GetValue() { return " + this.Text + ";}");
+                        object result = accessor();
+                        if(result != null) Console.WriteLine(result.ToString());
+                    }
                 }
             }
 
