@@ -173,6 +173,10 @@ namespace RobinhoodDesktop.Script
             {
                 StockSession.Instance = session;
             }
+            else
+            {
+                session.SourceFile.Close();
+            }
             return StockSession.Instance;
         }
 

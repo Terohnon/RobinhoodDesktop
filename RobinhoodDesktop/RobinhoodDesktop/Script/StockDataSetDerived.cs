@@ -11,6 +11,7 @@ namespace RobinhoodDesktop.Script
         public StockDataSetDerived(StockDataSet<U> source, StockDataFile file, StockDataCreator create, StockProcessingStateAccessor stateGetter)
         {
             this.SourceData = source;
+            this.Interval = source.Interval;
             this.File = file;
             this.Start = source.Start;
             this.Symbol = source.Symbol;
