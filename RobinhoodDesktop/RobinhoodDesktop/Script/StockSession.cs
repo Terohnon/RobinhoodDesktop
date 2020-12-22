@@ -188,7 +188,9 @@ namespace RobinhoodDesktop.Script
         public static DataChartGui AddChart(List<string> sources, List<string> sinkScripts)
         {
             var session = (Instance != null) ? Instance : LoadData(sources, sinkScripts);
-            return session.AddChart();
+            DataChartGui chart = null;
+            if(session != null) chart = session.AddChart();
+            return chart;
         }
 
         /// <summary>

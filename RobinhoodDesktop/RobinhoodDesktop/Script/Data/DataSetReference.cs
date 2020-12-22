@@ -35,6 +35,65 @@ namespace RobinhoodDesktop.Script
             get { return DataSet.Time(DataPointIndex); }
         }
 
+
+        /// <summary>
+        /// Determines the amount of trading time that elapsed between the two 
+        /// </summary>
+        /// <param name="start">The start time</param>
+        /// <param name="end">The end time</param>
+        /// <returns></returns>
+        public static TimeSpan GetElapsedTradingTime(DateTime start, DateTime end)
+        {
+            long ticksStart = toTradingTime(start);
+            long ticksEnd = toTradingTime(end);
+            return new TimeSpan(ticksEnd - ticksStart);
+        }
+
+        /// <summary>
+        /// Determines the amount of trading time that elapsed between the two 
+        /// </summary>
+        /// <param name="start">The start time</param>
+        /// <param name="end">The end time</param>
+        /// <returns></returns>
+        public static float GetElapsedDays(DateTime start, DateTime end)
+        {
+            return (float)(GetElapsedTradingTime(start, end).TotalHours / 6.5);
+        }
+
+        /// <summary>
+        /// Converts the specified time to a trading-hours time (all non-trading time stripped out)
+        /// </summary>
+        /// <param name="time">The time to convert</param>
+        /// <returns>The trading-only time</returns>
+        private static long toTradingTime(DateTime time)
+        {
+            const long startTradingTime = (TimeSpan.TicksPerHour * 9) + (TimeSpan.TicksPerMinute * 30);
+            const long endTradingTime = (TimeSpan.TicksPerHour * 16);
+            long ticks = time.Ticks;
+            long whole_days = ticks / TimeSpan.TicksPerDay;
+            long ticks_in_last_day = ticks % TimeSpan.TicksPerDay;
+            long full_weeks = whole_days / 7;
+            long days_in_last_week = whole_days % 7;
+            if(days_in_last_week >= 5)
+            {
+                days_in_last_week = 5;
+                ticks_in_last_day = 0;
+            }
+            if(ticks_in_last_day < startTradingTime)
+            {
+                ticks_in_last_day = startTradingTime;
+            }
+            else if(ticks_in_last_day > endTradingTime)
+            {
+                ticks_in_last_day = endTradingTime;
+            }
+            ticks_in_last_day -= startTradingTime;
+
+            long whole_working_days = ((full_weeks * 5) + days_in_last_week);
+            long working_ticks = whole_working_days * (endTradingTime - startTradingTime);
+            return working_ticks + ticks_in_last_day;
+        }
+
         /// <summary>
         /// The main update function which sets all of the member variables based on other source data
         /// </summary>

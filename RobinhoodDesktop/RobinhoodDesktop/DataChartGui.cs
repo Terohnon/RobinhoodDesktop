@@ -17,12 +17,12 @@ namespace RobinhoodDesktop
         {
             GuiPanel = new Panel();
             GuiPanel.Size = new System.Drawing.Size(600, 300);
-            GuiPanel.AutoSize = true;
+            GuiPanel.AutoSize = false;
             GuiPanel.BackColor = GuiStyle.BACKGROUND_COLOR;
             GuiPanel.BorderStyle = BorderStyle.FixedSingle;
             EventHandler resizeHandler = (sender, e) =>
             {
-                GuiPanel.Size = new System.Drawing.Size(GuiPanel.Parent.Width - 50, GuiPanel.Height);
+                GuiPanel.Size = new System.Drawing.Size(GuiPanel.Parent.Width - 50, GuiPanel.Parent.Height - GuiPanel.Top - 50);
                 SymbolTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), 5);
                 int intervalBtnPos = SymbolTextbox.Right + 5;
                 foreach(var pair in IntervalButtons)
@@ -43,6 +43,7 @@ namespace RobinhoodDesktop
             SymbolTextbox = new TextBox();
             SymbolTextbox.BackColor = GuiStyle.DARK_GREY;
             SymbolTextbox.ForeColor = GuiStyle.TEXT_COLOR;
+#if false
             SymbolTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;
             SymbolTextbox.AutoCompleteSource = AutoCompleteSource.CustomSource;
             SymbolTextbox.TextChanged += (sender, e) =>
@@ -57,6 +58,7 @@ namespace RobinhoodDesktop
                     t.AutoCompleteCustomSource = collection;
                 }
             };
+#endif
             SymbolTextbox.KeyDown += (s, eventArgs) =>
             {
                 if(eventArgs.KeyCode == Keys.Enter)
@@ -121,6 +123,8 @@ namespace RobinhoodDesktop
             // Add the interactive chart controls
             Plot.AddInteraction(new PlotDrag(true, true));
             Plot.AddInteraction(new HoverInteraction(this));
+            LineDrawer = new LineInteraction(this);
+            Plot.AddInteraction(LineDrawer);
 
             var plotCanvas = base.Canvas;
             GuiPanel.Resize += (sender, e) =>
@@ -203,7 +207,7 @@ namespace RobinhoodDesktop
             session.OnReload += ReloadData;
         }
 
-        #region Variables
+#region Variables
         /// <summary>
         /// The panel containing the GUI elements
         /// </summary>
@@ -239,6 +243,11 @@ namespace RobinhoodDesktop
         }
 
         /// <summary>
+        /// Interface for adding additional lines to the chart
+        /// </summary>
+        public LineInteraction LineDrawer;
+
+        /// <summary>
         /// The list of textboxes corresponding to the plot lines
         /// </summary>
         private List<TextBox> PlotLineTextboxes = new List<TextBox>();
@@ -264,9 +273,9 @@ namespace RobinhoodDesktop
         /// Button to reload the script and refresh the chart
         /// </summary>
         private GuiButton ReloadButton;
-        #endregion
+#endregion
 
-        #region Types
+#region Types
         private class HoverInteraction : NPlot.Interaction
         {
             public HoverInteraction(DataChartGui chart)
@@ -400,11 +409,13 @@ namespace RobinhoodDesktop
                 // Draw the line on the chart to show the cursor position
                 using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
                 {
+                    PhysicalAxis xAxis = Chart.Plot.PhysicalXAxis1Cache;
                     PhysicalAxis yAxis = Chart.Plot.PhysicalYAxis1Cache;
                     g.Clear(System.Drawing.Color.Transparent);
 
                     // Draw the line
                     g.DrawLine(Lines.TimePen, X, yAxis.PhysicalMin.Y, X, yAxis.PhysicalMax.Y);
+                    g.DrawLine(Lines.PricePen, xAxis.PhysicalMin.X, Y, xAxis.PhysicalMax.X, Y);
                 }
 
                 // Refresh the canvas to display the updated lines
@@ -457,6 +468,69 @@ namespace RobinhoodDesktop
             }
         }
 
+        public class LineInteraction : NPlot.Interaction
+        {
+            public LineInteraction(DataChartGui chart)
+            {
+                this.Chart = chart;
+                Canvas.Image = new System.Drawing.Bitmap(Chart.Plot.Canvas.Size.Width, Chart.Plot.Canvas.Size.Height);
+                Canvas.BackColor = System.Drawing.Color.Transparent;
+                Canvas.Size = Chart.Plot.Canvas.Size;
+                Canvas.Enabled = false;
+                Chart.Plot.Canvas.Controls.Add(Canvas);
+
+                Chart.Plot.Canvas.Resize += (object sender, System.EventArgs e) =>
+                {
+                    int width = Chart.Plot.Canvas.Size.Width;
+                    int height = Chart.Plot.Canvas.Size.Height;
+                    Canvas.Image = new System.Drawing.Bitmap(width, height);
+                    Canvas.Size = Chart.Plot.Canvas.Size;
+                };
+            }
+
+            /// <summary>
+            /// The chart the interaction should update
+            /// </summary>
+            public DataChartGui Chart;
+
+            /// <summary>
+            /// The canvas used to draw additional overlay lines
+            /// </summary>
+            public System.Windows.Forms.PictureBox Canvas = new PictureBox();
+
+            /// <summary>
+            /// Clears all lines from the canvas
+            /// </summary>
+            public void Clear()
+            {
+                using(System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Canvas.Image))
+                {
+                    g.Clear(System.Drawing.Color.Transparent);
+                }
+            }
+
+            /// <summary>
+            /// Adds lines to the chart
+            /// </summary>
+            /// <param name="pen">The pen to draw with</param>
+            /// <param name="lines">The lines to draw (start and end points)</param>
+            public void AddLine(System.Drawing.Pen pen, float startX, float startY, float endX, float endY)
+            {
+                // Draw the line on the chart
+                using(System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Canvas.Image))
+                {
+                    PhysicalAxis xAxis = Chart.Plot.PhysicalXAxis1Cache;
+                    PhysicalAxis yAxis = Chart.Plot.PhysicalYAxis1Cache;
+
+                    // Draw the line
+                    if(xAxis != null && yAxis != null)
+                    {
+                        g.DrawLine(pen, xAxis.WorldToPhysical(startX, true).X, yAxis.WorldToPhysical(startY, true).Y, xAxis.WorldToPhysical(endX, true).X, yAxis.WorldToPhysical(endY, true).Y);
+                    }
+                }
+            }
+        }
+
         public class BorderTextBox : TextBox
         {
             public System.Drawing.Color BorderColor
@@ -495,7 +569,7 @@ namespace RobinhoodDesktop
                 };
             }
         }
-        #endregion
+#endregion
 
         /// <summary>
         /// Gets a list of suggested symbols based on the search string
@@ -604,15 +678,16 @@ namespace RobinhoodDesktop
                         Plot.Refresh();
                     }
                 };
-                plotTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;
-                plotTextbox.AutoCompleteSource = AutoCompleteSource.CustomSource;
                 plotTextbox.GotFocus += (sender, e) => {
                     plotTextbox.Width = 800;
                     plotTextbox.BringToFront();
                 };
-                plotTextbox.LostFocus += (sender, e) =>{ plotTextbox.Width = 125; };
+                plotTextbox.LostFocus += (sender, e) => { plotTextbox.Width = 125; };
                 plotTextbox.Width = 125;
                 plotTextbox.Focus();
+#if false
+                plotTextbox.AutoCompleteMode = AutoCompleteMode.Suggest;
+                plotTextbox.AutoCompleteSource = AutoCompleteSource.CustomSource;
                 plotTextbox.TextChanged += (s, eventArgs) =>
                 {
                     if(plotTextbox.Text.Length >= 1)
@@ -624,6 +699,7 @@ namespace RobinhoodDesktop
                         plotTextbox.AutoCompleteCustomSource = collection;
                     }
                 };
+#endif
                 plotTextbox.ColorPanel.MouseClick += (sender, e) => {
                     if(e.Button == MouseButtons.Left)
                     {
@@ -716,6 +792,7 @@ namespace RobinhoodDesktop
             this.PlotLineTextboxes.Clear();
             this.SymbolTextbox.Text = "";
             base.Clear();
+            LineDrawer.Clear();
 
             PackPlotTextboxes();
             this.Refresh();
