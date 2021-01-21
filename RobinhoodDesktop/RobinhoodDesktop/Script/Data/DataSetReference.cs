@@ -6,6 +6,15 @@ using System.Threading.Tasks;
 
 namespace RobinhoodDesktop.Script
 {
+    /// <summary>
+    /// Can store custom data to associate with each DataSet
+    /// </summary>
+    public partial class DataPerSet
+    {
+
+
+    }
+
     public partial struct StockDataSink
     {
         /// <summary>
@@ -26,6 +35,12 @@ namespace RobinhoodDesktop.Script
         /// </summary>
         [NonSerialized]
         public int DataPointIndex;
+
+        /// <summary>
+        /// The custom data 
+        /// </summary>
+        [NonSerialized]
+        public DataPerSet DataSetData;
 
         /// <summary>
         /// Time timestamp of this data point
@@ -104,6 +119,15 @@ namespace RobinhoodDesktop.Script
             this.DataSet = data;
             this.DataSetIndex = data.ProcessingState.DataSetIndex;
             this.DataPointIndex = updateIndex;
+
+            if(DataPointIndex == 0)
+            {
+                DataSetData = new DataPerSet();
+            }
+            else
+            {
+                DataSetData = data[0].DataSetData;
+            }
         }
     }
 }

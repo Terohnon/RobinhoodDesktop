@@ -699,6 +699,12 @@ namespace RobinhoodDesktop
                             l[k].Plot.PlotYAxis.WorldMax = groups[j].Item3;
                         }
                     }
+                    else
+                    {
+                        groups[j] = new Tuple<List<PlotLine>, double, double>(new List<PlotLine>() { Lines[i] },
+                            Lines[i].Plot.PlotYAxis.WorldMin,
+                            Lines[i].Plot.PlotYAxis.WorldMax);
+                    }
                 }
             }
         }

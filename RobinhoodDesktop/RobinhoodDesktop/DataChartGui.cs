@@ -483,8 +483,11 @@ namespace RobinhoodDesktop
                 {
                     int width = Chart.Plot.Canvas.Size.Width;
                     int height = Chart.Plot.Canvas.Size.Height;
-                    Canvas.Image = new System.Drawing.Bitmap(width, height);
-                    Canvas.Size = Chart.Plot.Canvas.Size;
+                    if ((width > 0) && (height > 0))
+                    {
+                        Canvas.Image = new System.Drawing.Bitmap(width, height);
+                        Canvas.Size = Chart.Plot.Canvas.Size;
+                    }
                 };
             }
 
@@ -658,7 +661,7 @@ namespace RobinhoodDesktop
                         if(t.Text.Length == 0)
                         {
                             // Remove a plot line if it's expression is erased
-                            plot.Plot.Remove(this);
+                            if(plot.Plot != null) plot.Plot.Remove(this);
                             this.Lines.Remove(plot);
                             this.PlotLineTextboxes.Remove(t);
                             this.GuiPanel.Controls.Remove(t);

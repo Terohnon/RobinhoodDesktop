@@ -289,7 +289,10 @@ namespace RobinhoodDesktop.Script
             }
             catch(Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show(ex.ToString());
+                GuiContainer.BeginInvoke((Action)(() =>
+                {
+                    System.Windows.Forms.MessageBox.Show(ex.ToString());
+                }));
             }
         }
     }

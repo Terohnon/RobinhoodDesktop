@@ -292,7 +292,7 @@ namespace RobinhoodDesktop.Script
                 // First replace the fields with an index to prevent names within a name from getting messed up
                 for (int i = 0; i < fields.Count; i++)
                 {
-                    src = src.Replace(fields[i], string.Format("<={0}>", i));
+                    src = System.Text.RegularExpressions.Regex.Replace(src, fields[i] + "([^a-zA-Z0-9_]|$)", string.Format("<={0}>$1", i));
                 }
 
                 // Next pre-pend the data set to the field names
