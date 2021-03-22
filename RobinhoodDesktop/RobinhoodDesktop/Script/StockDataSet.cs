@@ -309,7 +309,7 @@ namespace RobinhoodDesktop.Script
 
                 // Build the expression into an accessor function
                 //src = "namespace RobinhoodDesktop.Script { public class ExpressionAccessor{ public static object GetValue(StockDataSet<" + typeof(T).Name + "> data, int updateIndex) { return " + src + ";} } }";
-                var compiler = CSScript.MonoEvaluator.ReferenceAssemblyOf<T>();
+                IEvaluator compiler = CSScript.MonoEvaluator.Clone();
                 foreach(var s in session.Scripts.Values) compiler = compiler.ReferenceAssembly(s.Location);
                 //var script = CSScript.LoadCode(src);
                 //CSScript.Evaluator.

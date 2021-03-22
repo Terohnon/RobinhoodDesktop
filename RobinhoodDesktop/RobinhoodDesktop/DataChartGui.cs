@@ -129,8 +129,11 @@ namespace RobinhoodDesktop
             var plotCanvas = base.Canvas;
             GuiPanel.Resize += (sender, e) =>
             {
-                plotCanvas.Size = new System.Drawing.Size(GuiPanel.Width - 250, GuiPanel.Height - 75);
-                plotCanvas.Location = new System.Drawing.Point(GuiPanel.Width - plotCanvas.Width - 5, (GuiPanel.Height - plotCanvas.Height) / 2);
+                if ((GuiPanel.Width > 250) && (GuiPanel.Height > 75))
+                {
+                    plotCanvas.Size = new System.Drawing.Size(GuiPanel.Width - 250, GuiPanel.Height - 75);
+                    plotCanvas.Location = new System.Drawing.Point(GuiPanel.Width - plotCanvas.Width - 5, (GuiPanel.Height - plotCanvas.Height) / 2);
+                }
             };
             GuiPanel.Controls.Add(plotCanvas);
 
@@ -294,8 +297,11 @@ namespace RobinhoodDesktop
                 {
                     int width = Chart.Plot.Canvas.Size.Width;
                     int height = Chart.Plot.Canvas.Size.Height;
-                    Lines.Canvas.Image = new System.Drawing.Bitmap(width, height);
-                    Lines.Canvas.Size = Chart.Plot.Canvas.Size;
+                    if ((width > 0) && (height > 0))
+                    {
+                        Lines.Canvas.Image = new System.Drawing.Bitmap(width, height);
+                        Lines.Canvas.Size = Chart.Plot.Canvas.Size;
+                    }
                 };
             }
 
