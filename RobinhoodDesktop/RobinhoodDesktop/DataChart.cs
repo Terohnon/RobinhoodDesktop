@@ -683,9 +683,9 @@ namespace RobinhoodDesktop
                 {
                     double groupAvg = (groups[j].Item2 + groups[j].Item3) / 2;
                     double groupRange = (groups[j].Item3 - groups[j].Item2) / 2;
-                    double tolerance = 1.0f;
-                    if (((Lines[i].Plot.PlotYAxis.WorldMin > (groupAvg - (groupRange * tolerance))) &&
-                         (Lines[i].Plot.PlotYAxis.WorldMax < (groupAvg + (groupRange * tolerance)))) ||
+                    double tolerance = 0.5f;
+                    if ((((Math.Abs(groups[j].Item2 - Lines[i].Plot.PlotYAxis.WorldMin) / groupRange) < tolerance) &&
+                         ((Math.Abs(groups[j].Item3 - Lines[i].Plot.PlotYAxis.WorldMax) / groupRange) < tolerance)) ||
                         (Lines[i].Locked && groups[j].Item1[0].Locked))
                     {
                         var l = groups[j].Item1;

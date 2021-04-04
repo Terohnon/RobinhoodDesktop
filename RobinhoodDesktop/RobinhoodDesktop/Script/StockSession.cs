@@ -289,10 +289,10 @@ namespace RobinhoodDesktop.Script
             }
             catch(Exception ex)
             {
-                GuiContainer.BeginInvoke((Action)(() =>
-                {
-                    System.Windows.Forms.MessageBox.Show(ex.ToString());
-                }));
+                string err = ex.ToString();
+                System.Text.RegularExpressions.Regex.Replace(err, "\r\n.*?warning.*?\r\n", "\r\n");
+                Console.WriteLine(err);
+                System.Windows.Forms.MessageBox.Show(err);
             }
         }
     }
