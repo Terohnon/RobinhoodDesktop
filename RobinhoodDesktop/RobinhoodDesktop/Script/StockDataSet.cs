@@ -158,7 +158,19 @@ namespace RobinhoodDesktop.Script
                     set = set.Previous;
                     i += set.Count;
                 }
-                return set.DataSet.InternalArray[(i >= 0) ? i : 0];
+                while((set.DataSet.InternalArray.Length <= i) && (set.Previous != null))
+                {
+                    set = set.Previous;
+                    i = set.DataSet.InternalArray.Length - 1;
+                }
+                if (i < set.DataSet.InternalArray.Length)
+                {
+                    return set.DataSet.InternalArray[(i >= 0) ? i : 0];
+                }
+                else
+                {
+                    return new T();
+                }
             }
         }
 
@@ -292,7 +304,7 @@ namespace RobinhoodDesktop.Script
                 // First replace the fields with an index to prevent names within a name from getting messed up
                 for (int i = 0; i < fields.Count; i++)
                 {
-                    src = System.Text.RegularExpressions.Regex.Replace(src, fields[i] + "([^a-zA-Z0-9_]|$)", string.Format("<={0}>$1", i));
+                    src = System.Text.RegularExpressions.Regex.Replace(src, "([^a-zA-Z0-9_.]|^)" + fields[i] + "([^a-zA-Z0-9_]|$)", string.Format("$1<={0}>$2", i));
                 }
 
                 // Next pre-pend the data set to the field names

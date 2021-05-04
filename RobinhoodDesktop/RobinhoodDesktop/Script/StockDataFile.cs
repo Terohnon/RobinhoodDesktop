@@ -708,6 +708,85 @@ namespace RobinhoodDesktop.Script
         }
 
         /// <summary>
+        /// Filters the datasets to remove large spikes due to incorrect prices reported by the data source
+        /// </summary>
+        /// <param name="segments">The data to be filtered</param>
+        private static void FilterData(Dictionary<string, List<StockDataSet<StockDataBase>>> segments)
+        {
+            var transitions = new List<int>();
+            var transitionVolatilities = new List<float>();
+            foreach (var pair in segments)
+            {
+                foreach(var set in pair.Value)
+                {
+                    if(pair.Key == "AGNC" && set.Start.Year == 2012 && set.Start.Month == 3 && set.Start.Day == 1)
+                    {
+
+                    
+                    }
+                    float volatility = 0;
+                    int volatilityPoints = 0;
+                    transitions.Clear();
+                    transitionVolatilities.Clear();
+                    if(set.Previous == null)
+                    {
+                        transitions.Add(0);
+                        transitionVolatilities.Add(0);
+                    }
+                    for (int i = (set.Previous != null) ? 0 : 1; i < set.Count; i++)
+                    {
+                        // Check for a large jump in price
+                        float diff = Math.Abs((set[i].Price / set[i - 1].Price) - 1.0f);
+                        if (diff > 0.025f)
+                        {
+                            // Mark the jump in price as a transition point, and record the volatility leading up to that point
+                            transitions.Add(i);
+                            transitionVolatilities.Add((volatilityPoints > 0) ? volatility / volatilityPoints : 0);
+                            volatility = 0;
+                            volatilityPoints = 0;
+                        }
+                        else
+                        {
+                            // Look for when the price starts changing again
+                            volatility += diff;
+                            volatilityPoints++;
+                            if(((volatilityPoints > 20) && ((volatility / volatilityPoints) > 0.00025f)) ||
+                                (i == set.Count - 1))
+                            {
+                                // Looks like things are changing normally, so check if there are any transitions that need to be filtered out
+                                if(transitions.Count >= 1)
+                                {
+                                    int end = ((i == set.Count - 1) ? i + 1 : transitions[transitions.Count - 1]);
+                                    int start = transitions[transitions.Count - 1];
+                                    for(int t = transitions.Count - 1; t > 0; t--)
+                                    {
+                                        // Check for transitions which had a period of very low volatility
+                                        if(transitionVolatilities[t] < 0.00025f)
+                                        {
+                                            start = transitions[t - 1];
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    float startPrice = ((start > 0 || set.Previous != null) ? set[start - 1].Price : set[end + 1].Price);
+                                    float endPrice = ((i == set.Count - 1) ? startPrice : set[end + 1].Price);
+                                    for(int j = start; (end > start) && (startPrice != 0) && (endPrice != 0) && (j < end); j++)
+                                    {
+                                        set.DataSet.InternalArray[j].Price = (startPrice + ((endPrice - startPrice) * ((float)((j - start) + 1) / ((end - start) + 1))));
+                                    }
+                                    transitions.Clear();
+                                    transitionVolatilities.Clear();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Reads the specified data streams, and converts them into a basic stock data file
         /// </summary>
         /// <param name="sourceFiles">The legacy data files</param>
@@ -756,6 +835,7 @@ namespace RobinhoodDesktop.Script
                         // No matching set was found, so create a new one
                         StockDataSet<StockDataBase> newSet = new StockDataSet<StockDataBase>(symbol, fileStart, newFile);
                         newSet.DataSet.Resize(391);
+                        var dataForSym = segments[symbol];
                         fileData.Add(newSet);
                         if(sets.Count > 0) newSet.Previous = sets[sets.Count - 1];
                         sets.Add(newSet);
@@ -812,6 +892,9 @@ namespace RobinhoodDesktop.Script
                     }
                 }
             }
+
+            // Filter the data before saving it
+            FilterData(segments);
 
             // Save the old file to disk
             newFile.SetSegments(segments);

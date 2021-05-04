@@ -333,6 +333,9 @@
     <Compile Include="MachineLearning\StockMLData.cs" />
     <Compile Include="MenuBar.cs" />
     <Compile Include="RobinhoodInterface.cs" />
+    <Content Include="Content\GUI\ArrowRight.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\GUI\Button_Live.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

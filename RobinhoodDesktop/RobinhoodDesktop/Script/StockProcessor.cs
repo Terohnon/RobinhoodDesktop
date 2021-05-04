@@ -71,6 +71,13 @@ namespace RobinhoodDesktop.Script
             DerivedData = StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToInterface(HistoricalData);
             Session.Data = DerivedData;
             Session.SinkFile.SetSegments<StockDataSink>(StockDataSetDerived<StockDataSink, StockDataSource, StockProcessingState>.CastToBase(HistoricalData));
+
+            foreach (var pair in HistoricalData)
+            {
+                var state = new StockProcessingState();
+                state.DataSet = pair.Value;
+                ProcessingStates[pair.Key] = new Dictionary<TimeSpan, StockProcessingState>() {  };
+            }
         }
 
         #region Types
@@ -366,10 +373,16 @@ namespace RobinhoodDesktop.Script
                 else
                 {
                     // Assume incrementing to the next data set
-                    state.DataSetIndex++;
+                    for (; state.DataSetIndex < state.DataSet.Count(); state.DataSetIndex++)
+                    {
+                        if (state.DataSet[state.DataSetIndex] == data)
+                        {
+                            break;
+                        }
+                    }
 
                     // Check if processing restarted
-                    if(start < state.LastProcessedStartTime)
+                    if (start < state.LastProcessedStartTime)
                     {
                         state = new StockProcessingState();
                         state.DataSet = HistoricalData[symbol];

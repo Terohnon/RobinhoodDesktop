@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Drawing.Imaging;
 
 using RobinhoodDesktop.Script;
 using NPlot;
@@ -24,13 +25,9 @@ namespace RobinhoodDesktop
             {
                 GuiPanel.Size = new System.Drawing.Size(GuiPanel.Parent.Width - 50, GuiPanel.Parent.Height - GuiPanel.Top - 50);
                 SymbolTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), 5);
-                int intervalBtnPos = SymbolTextbox.Right + 5;
-                foreach(var pair in IntervalButtons)
-                {
-                    pair.Item1.Location = new Point(intervalBtnPos, SymbolTextbox.Top);
-                    intervalBtnPos = pair.Item1.Right + 5;
-                }
-                ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width / 2) - 5, 5);
+                SymbolNextButton.Location = new Point(SymbolTextbox.Right + 5, SymbolTextbox.Top);
+                SymbolPrevButton.Location = new Point(SymbolTextbox.Left - 5 - SymbolPrevButton.Width, SymbolTextbox.Top);
+                ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width) - 5, 5);
                 XAxisTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), GuiPanel.Height - XAxisTextbox.Height - 10);
             };
             GuiPanel.ParentChanged += (sender, e) =>
@@ -63,12 +60,40 @@ namespace RobinhoodDesktop
             {
                 if(eventArgs.KeyCode == Keys.Enter)
                 {
-                    SetSymbolInterval();
                     SetPlotLineSymbol(SymbolTextbox.Text);
                     this.Refresh();
                 }
             };
             GuiPanel.Controls.Add(SymbolTextbox);
+
+            // Create the next and previous arrows for the symbol list
+            SymbolNextButton = new PictureBox();
+            SymbolNextButton.Image = System.Drawing.Bitmap.FromFile("Content/GUI/ArrowRight.png");
+            SymbolNextButton.Size = SymbolNextButton.Image.Size;
+            SymbolNextButton.Click += (sender, e) =>
+            {
+                var allSymbols = DataSets.Keys.ToList();
+                if (allSymbols.Count > 0)
+                {
+                    SetPlotLineSymbol(allSymbols[Math.Min(allSymbols.IndexOf(SymbolTextbox.Text) + 1, allSymbols.Count - 1)]);
+                    this.Refresh();
+                }
+            };
+            GuiPanel.Controls.Add(SymbolNextButton);
+            SymbolPrevButton = new PictureBox();
+            SymbolPrevButton.Image = System.Drawing.Bitmap.FromFile("Content/GUI/ArrowRight.png");
+            SymbolPrevButton.Image.RotateFlip(RotateFlipType.RotateNoneFlipX);
+            SymbolPrevButton.Size = SymbolPrevButton.Image.Size;
+            SymbolPrevButton.Click += (sender, e) =>
+            {
+                var allSymbols = DataSets.Keys.ToList();
+                if (allSymbols.Count > 0)
+                {
+                    SetPlotLineSymbol(allSymbols[Math.Max(allSymbols.IndexOf(SymbolTextbox.Text) - 1, 0)]);
+                    this.Refresh();
+                }
+            };
+            GuiPanel.Controls.Add(SymbolPrevButton);
 
             XAxisTextbox = SymbolTextbox.Clone();
             XAxisTextbox.Text = "Time";
@@ -122,7 +147,7 @@ namespace RobinhoodDesktop
 
             // Add the interactive chart controls
             Plot.AddInteraction(new PlotDrag(true, true));
-            Plot.AddInteraction(new HoverInteraction(this));
+            Plot.AddInteraction(Hover = new HoverInteraction(this));
             LineDrawer = new LineInteraction(this);
             Plot.AddInteraction(LineDrawer);
 
@@ -156,30 +181,6 @@ namespace RobinhoodDesktop
             };
             GuiPanel.Controls.Add(ErrorMessageLabel);
             ErrorMessageLabel.BringToFront();
-
-            foreach(var pair in IntervalButtons)
-            {
-                pair.Item1.SetImage(GuiButton.ButtonImage.GREEN_TRANSPARENT);
-                pair.Item1.Click += (sender, e) =>
-                {
-                    // Update the selected button (first)
-                    foreach(var p in IntervalButtons)
-                    {
-                        p.Item1.SetImage(GuiButton.ButtonImage.GREEN_TRANSPARENT);
-                    }
-                    pair.Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
-
-                    // Set the new interval
-                    SetSymbolInterval();
-                    foreach (var l in Lines)
-                    {
-                        l.Generate(this);
-                    }
-                    Refresh();
-                };
-                GuiPanel.Controls.Add(pair.Item1);
-            }
-            IntervalButtons[0].Item1.SetImage(GuiButton.ButtonImage.GREEN_WHITE);
 
             // Add the button to reload the session
             ReloadButton = new GuiButton("Reload");
@@ -251,6 +252,11 @@ namespace RobinhoodDesktop
         public LineInteraction LineDrawer;
 
         /// <summary>
+        /// The hover interaction
+        /// </summary>
+        public HoverInteraction Hover;
+
+        /// <summary>
         /// The list of textboxes corresponding to the plot lines
         /// </summary>
         private List<TextBox> PlotLineTextboxes = new List<TextBox>();
@@ -261,16 +267,14 @@ namespace RobinhoodDesktop
         private List<Label> PlotLineLabels = new List<Label>();
 
         /// <summary>
-        /// Contains the buttons used to select the desired data interval
+        /// Button to advance to the next symbol
         /// </summary>
-        private List<Tuple<GuiButton, TimeSpan>> IntervalButtons = new List<Tuple<GuiButton, TimeSpan>>()
-        {
-            { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 min."), new TimeSpan(0, 1, 0)) },
-            { new Tuple<GuiButton, TimeSpan>(new GuiButton("5 min."), new TimeSpan(0, 5, 0)) },
-            { new Tuple<GuiButton, TimeSpan>(new GuiButton("10 min."), new TimeSpan(0, 10, 0)) },
-            { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 hr."), new TimeSpan(1, 0, 0)) },
-            { new Tuple<GuiButton, TimeSpan>(new GuiButton("1 day."), new TimeSpan(24, 0, 0)) },
-        };
+        private PictureBox SymbolNextButton;
+
+        /// <summary>
+        /// Button to return to the previous symbol
+        /// </summary>
+        private PictureBox SymbolPrevButton;
 
         /// <summary>
         /// Button to reload the script and refresh the chart
@@ -279,7 +283,7 @@ namespace RobinhoodDesktop
 #endregion
 
 #region Types
-        private class HoverInteraction : NPlot.Interaction
+        public class HoverInteraction : NPlot.Interaction
         {
             public HoverInteraction(DataChartGui chart)
             {
@@ -370,22 +374,19 @@ namespace RobinhoodDesktop
             }
 
             /// <summary>
-            /// Handles a move move event
+            /// Updates the chart based on the specified cursor position
             /// </summary>
-            /// <param name="X">The X mouse coordinate</param>
-            /// <param name="Y">The Y mouse coordinate</param>
-            /// <param name="keys">The mouse buttons that are pressed</param>
-            /// <param name="ps">The plot surface the mouse is moving over</param>
-            /// <returns></returns>
-            public override bool DoMouseMove(int X, int Y, Modifier keys, InteractivePlotSurface2D ps)
+            /// <param name="X">The X coordinate of the cursor</param>
+            /// <param name="Y">The Y coordinate of the cursor</param>
+            public void UpdateCursor(int X, int Y)
             {
-                if ((Chart.Lines.Count == 0) || (Chart.Plot.PhysicalXAxis1Cache == null)) return false;
+                if ((Chart.Lines.Count == 0) || (Chart.Plot.PhysicalXAxis1Cache == null)) return;
                 double mouseVal = Chart.Plot.PhysicalXAxis1Cache.PhysicalToWorld(new System.Drawing.Point(X, Y), false);
-                
+
                 // Set the text values based on the cursor position
-                if(Chart.XAxis.Equals("Time"))
+                if (Chart.XAxis.Equals("Time"))
                 {
-                    if(!Chart.Lines[0].DataMutex.WaitOne(5000)) return false;
+                    if (!Chart.Lines[0].DataMutex.WaitOne(5000)) return;
                     int idx = Chart.GetDataIndex(mouseVal);
                     if (idx >= 0)
                     {
@@ -396,7 +397,7 @@ namespace RobinhoodDesktop
                     {
                         Chart.PlotLineLabels[i].Text = Chart.Lines[i].PrintValue(idx);
                     }
-                        
+
                 }
                 else
                 {
@@ -411,7 +412,7 @@ namespace RobinhoodDesktop
                         }
                     }
                 }
-
+                
                 // Draw the line on the chart to show the cursor position
                 using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(Lines.Canvas.Image))
                 {
@@ -426,6 +427,19 @@ namespace RobinhoodDesktop
 
                 // Refresh the canvas to display the updated lines
                 Chart.Plot.Canvas.Refresh();
+            }
+
+            /// <summary>
+            /// Handles a move move event
+            /// </summary>
+            /// <param name="X">The X mouse coordinate</param>
+            /// <param name="Y">The Y mouse coordinate</param>
+            /// <param name="keys">The mouse buttons that are pressed</param>
+            /// <param name="ps">The plot surface the mouse is moving over</param>
+            /// <returns></returns>
+            public override bool DoMouseMove(int X, int Y, Modifier keys, InteractivePlotSurface2D ps)
+            {
+                UpdateCursor(X, Y);
 
                 return false;
             }
@@ -626,26 +640,6 @@ namespace RobinhoodDesktop
         }
 
         /// <summary>
-        /// Updates the interval for the current symbol
-        /// </summary>
-        private void SetSymbolInterval()
-        {
-            TimeSpan span = IntervalButtons.Where((i) => { return i.Item1.Image == GuiButton.ButtonImages[(int)GuiButton.ButtonImage.GREEN_WHITE]; }).First().Item2;
-            List<StockDataInterface> symbolDataSets;
-            List<string> symbols = GetSymbolList(SymbolTextbox.Text);
-            foreach(var symbol in symbols)
-            {
-                if(DataSets.TryGetValue(symbol, out symbolDataSets))
-                {
-                    foreach(var s in symbolDataSets)
-                    {
-                        s.SetInterval(span);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Adds a new line to the plot
         /// </summary>
         public void AddPlotLine(string expression = "")
@@ -815,6 +809,17 @@ namespace RobinhoodDesktop
         {
             this.SymbolTextbox.Text = symbol;
             base.SetPlotLineSymbol(symbol);
+        }
+
+        /// <summary>
+        /// Saves a screenshot image of the chart to the specified output file
+        /// </summary>
+        /// <param name="path">The path to save the file to (should point to a .png filename)</param>
+        public void SaveImage(string path)
+        {
+            Bitmap bm = new Bitmap(GuiPanel.Width, GuiPanel.Height);
+            GuiPanel.DrawToBitmap(bm, new Rectangle(0, 0, GuiPanel.Width, GuiPanel.Height));
+            bm.Save(path, ImageFormat.Png);
         }
     }
 
