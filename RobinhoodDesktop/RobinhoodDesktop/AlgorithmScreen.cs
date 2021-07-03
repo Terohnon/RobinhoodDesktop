@@ -8,6 +8,7 @@ using System.Drawing;
 using System.IO;
 
 using CSScriptLibrary;
+using RobinhoodDesktop.Script;
 
 namespace RobinhoodDesktop
 {
@@ -133,7 +134,7 @@ namespace RobinhoodDesktop
             // Add the GUI for selecting the data scripts
             DataScriptListPanel = new Panel();
             DataScriptListPanel.Location = new Point(DataFileTextbox.Bounds.Right + 25, DataFileTextbox.Location.Y);
-            DataScriptListPanel.Size = new Size(150, 150);
+            DataScriptListPanel.Size = new Size(150, DataFileTextbox.Height);
             DataScriptListPanel.BorderStyle = BorderStyle.FixedSingle;
             DataScriptListPanel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
             GuiBox.Controls.Add(DataScriptListPanel);
@@ -179,11 +180,18 @@ namespace RobinhoodDesktop
             };
             foreach(var script in Cfg.DataScripts) AddDataScript(script);
             GuiBox.Controls.Add(DataScriptAddButton);
+            DataScriptReloadButton = new GuiButton("Reload");
+            DataScriptReloadButton.Location = new Point(DataScriptAddButton.Right + 5, DataScriptAddButton.Top);
+            DataScriptAddButton.MouseUp += (sender, e) =>
+            {
+                if(StockSession.Instance != null) StockSession.Instance.Reload();
+            };
+            GuiBox.Controls.Add(DataScriptReloadButton);
 
             // Add the GUI for selecting the data scripts
             DecisionScriptListPanel = new Panel();
             DecisionScriptListPanel.Location = new Point(DataScriptListPanel.Bounds.Right + 25, DataScriptListPanel.Location.Y);
-            DecisionScriptListPanel.Size = new Size(450, 150);
+            DecisionScriptListPanel.Size = new Size(450, DataFileTextbox.Height);
             DecisionScriptListPanel.BorderStyle = BorderStyle.FixedSingle;
             DecisionScriptListPanel.ForeColor = GuiStyle.PRICE_COLOR_POSITIVE;
             GuiBox.Controls.Add(DecisionScriptListPanel);
@@ -229,6 +237,7 @@ namespace RobinhoodDesktop
                         var script = scriptPath;
                         if (Cfg.DataScripts.Contains(script)) continue;
 
+                        Cfg.ActionScripts.Add(scriptPath);
                         DecisionScriptListPanel.Controls.Add(new ScriptTextBox(this, scriptPath));
                     }
                 }
@@ -324,6 +333,7 @@ namespace RobinhoodDesktop
         private TextBox DataFileTextbox;
 
         private GuiButton DataScriptAddButton;
+        private GuiButton DataScriptReloadButton;
         private Panel DataScriptListPanel;
         private CustomControls.CustomScrollbar DataScriptListScrollbar;
 

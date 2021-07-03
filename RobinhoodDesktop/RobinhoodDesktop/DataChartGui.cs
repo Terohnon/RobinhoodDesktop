@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Windows.Media.Imaging;
 
 using RobinhoodDesktop.Script;
 using NPlot;
@@ -24,16 +25,21 @@ namespace RobinhoodDesktop
             EventHandler resizeHandler = (sender, e) =>
             {
                 GuiPanel.Size = new System.Drawing.Size(GuiPanel.Parent.Width - 50, GuiPanel.Parent.Height - GuiPanel.Top - 50);
-                SymbolTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), 5);
-                SymbolNextButton.Location = new Point(SymbolTextbox.Right + 5, SymbolTextbox.Top);
-                SymbolPrevButton.Location = new Point(SymbolTextbox.Left - 5 - SymbolPrevButton.Width, SymbolTextbox.Top);
-                ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width) - 5, 5);
-                XAxisTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), GuiPanel.Height - XAxisTextbox.Height - 10);
             };
             GuiPanel.ParentChanged += (sender, e) =>
             {
                 GuiPanel.Parent.Resize += resizeHandler;
                 resizeHandler(sender, e);
+            };
+            GuiPanel.Resize += (sender, e) =>
+            {
+                SymbolTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), 5);
+                SymbolNextButton.Location = new Point(SymbolTextbox.Right + 5, SymbolTextbox.Top);
+                SymbolPrevButton.Location = new Point(SymbolTextbox.Left - 5 - SymbolPrevButton.Width, SymbolTextbox.Top);
+                SaveImageButton.Location = new System.Drawing.Point(GuiPanel.Width - (SaveImageButton.Width) - 5, 5);
+                ChartDescriptionTextbox.Location = new Point(SymbolNextButton.Right + 15, SymbolTextbox.Top);
+                ChartDescriptionTextbox.Size = new Size((SaveImageButton.Left - ChartDescriptionTextbox.Left) - 15, ChartDescriptionTextbox.Height);
+                XAxisTextbox.Location = new System.Drawing.Point((GuiPanel.Width / 2) - (SymbolTextbox.Width / 2), GuiPanel.Height - XAxisTextbox.Height - 10);
             };
 
             // Create the symbol search textbox
@@ -94,6 +100,9 @@ namespace RobinhoodDesktop
                 }
             };
             GuiPanel.Controls.Add(SymbolPrevButton);
+
+            ChartDescriptionTextbox = SymbolTextbox.Clone();
+            GuiPanel.Controls.Add(ChartDescriptionTextbox);
 
             XAxisTextbox = SymbolTextbox.Clone();
             XAxisTextbox.Text = "Time";
@@ -183,13 +192,19 @@ namespace RobinhoodDesktop
             ErrorMessageLabel.BringToFront();
 
             // Add the button to reload the session
-            ReloadButton = new GuiButton("Reload");
-            ReloadButton.Location = new System.Drawing.Point(GuiPanel.Width - (ReloadButton.Width / 2) - 5, 5);
-            ReloadButton.Click += (sender, e) =>
+            SaveImageButton = new GuiButton("Save Img");
+            SaveImageButton.Location = new System.Drawing.Point(GuiPanel.Width - (SaveImageButton.Width / 2) - 5, 5);
+            SaveImageButton.Click += (sender, e) =>
             {
-                Session.Reload();
+                var saveDiag = new System.Windows.Forms.SaveFileDialog();
+                saveDiag.Title = "Save chart image...";
+                saveDiag.FileName = SymbolTextbox.Text + "_" + ChartDescriptionTextbox.Text + ".png";
+                if (saveDiag.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    SaveImage(saveDiag.FileName);
+                }
             };
-            GuiPanel.Controls.Add(ReloadButton);
+            GuiPanel.Controls.Add(SaveImageButton);
 
             ChartChanged += () =>
             {
@@ -257,6 +272,11 @@ namespace RobinhoodDesktop
         public HoverInteraction Hover;
 
         /// <summary>
+        /// A description textbox used for saving images
+        /// </summary>
+        public TextBox ChartDescriptionTextbox;
+
+        /// <summary>
         /// The list of textboxes corresponding to the plot lines
         /// </summary>
         private List<TextBox> PlotLineTextboxes = new List<TextBox>();
@@ -277,9 +297,14 @@ namespace RobinhoodDesktop
         private PictureBox SymbolPrevButton;
 
         /// <summary>
-        /// Button to reload the script and refresh the chart
+        /// Button to save an image of the chart
         /// </summary>
-        private GuiButton ReloadButton;
+        private GuiButton SaveImageButton;
+
+        /// <summary>
+        /// Mutex used to syncrhonize access to the chart
+        /// </summary>
+        private Mutex GuiMutex = new Mutex();
 #endregion
 
 #region Types
@@ -386,13 +411,11 @@ namespace RobinhoodDesktop
                 // Set the text values based on the cursor position
                 if (Chart.XAxis.Equals("Time"))
                 {
-                    if (!Chart.Lines[0].DataMutex.WaitOne(5000)) return;
                     int idx = Chart.GetDataIndex(mouseVal);
                     if (idx >= 0)
                     {
                         Chart.XAxisValue.Text = string.Format("{0:t} {0:MMM d} '{0:yy}", Chart.Lines[0].Data.Rows[idx][Chart.XAxis]);
                     }
-                    Chart.Lines[0].DataMutex.ReleaseMutex();
                     for (int i = 0; i < Chart.Lines.Count; i++)
                     {
                         Chart.PlotLineLabels[i].Text = Chart.Lines[i].PrintValue(idx);
@@ -817,9 +840,16 @@ namespace RobinhoodDesktop
         /// <param name="path">The path to save the file to (should point to a .png filename)</param>
         public void SaveImage(string path)
         {
+            System.Threading.Thread.Sleep(100);
+            System.Windows.Forms.Application.DoEvents();
+
+            GuiMutex.WaitOne();
+
             Bitmap bm = new Bitmap(GuiPanel.Width, GuiPanel.Height);
             GuiPanel.DrawToBitmap(bm, new Rectangle(0, 0, GuiPanel.Width, GuiPanel.Height));
             bm.Save(path, ImageFormat.Png);
+
+            GuiMutex.ReleaseMutex();
         }
     }
 

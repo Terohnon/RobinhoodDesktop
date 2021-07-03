@@ -136,7 +136,7 @@ namespace RobinhoodDesktop.Script
                 foreach(var l in legacyFiles) sources.Remove(l);
             }
 
-            session.SourceFile = StockDataFile.Open(sources.ConvertAll<Stream>((s) => { return new FileStream(s, FileMode.Open); }));
+            session.SourceFile = StockDataFile.Open(sources.ConvertAll<Stream>((s) => { return System.IO.Stream.Synchronized(new FileStream(s, FileMode.Open)); }));
             session.DataScriptPaths.Add("tmp/" + SOURCE_CLASS + ".cs");
             using(var file = new StreamWriter(new FileStream(session.DataScriptPaths.Last(), FileMode.Create))) file.Write(session.SourceFile.GetSourceCode(SOURCE_CLASS));
 

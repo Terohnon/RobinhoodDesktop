@@ -145,7 +145,7 @@ namespace RobinhoodDesktop
                 if (!string.IsNullOrEmpty(expression))
                 {
                     // Attempt to generate the data table for the given expression
-                    this.GetValue = source.getExpressionEvaluator(expression);
+                    this.GetValue = null;
                     Generate(source);
                 }
                 if (ExpressionChanged != null) ExpressionChanged(this);
@@ -163,8 +163,10 @@ namespace RobinhoodDesktop
                     // Remove any previous plot
                     if (Plot != null)
                     {
+                        source.PlotMutex.WaitOne();
                         Plot.Remove(source);
                         Plot = null;
+                        source.PlotMutex.ReleaseMutex();
                     }
 
                     // Create a new plot
@@ -194,13 +196,14 @@ namespace RobinhoodDesktop
             /// <param name="source"></param>
             public void Generate(DataChart source)
             {
-                DataMutex.WaitOne();
+                if (!DataMutex.WaitOne(250)) return;
                 List<string> symbols = source.GetSymbolList(Symbol);
                 this.Data = new DataTable();
 
                 foreach (var s in symbols)
                 {
                     List<StockDataInterface> sources;
+                    if (this.GetValue == null) this.GetValue = source.getExpressionEvaluator(Expression);    // Create the expression only when needed to speed up the GUI and allow parallel compiling
                     if (!source.getDataList(s, out sources) || (GetValue == null)) break;
 
                     // Load the sources first (need to load to the end before accessing the data since loading later sources could backfill data) */
@@ -256,7 +259,7 @@ namespace RobinhoodDesktop
             public string PrintValue(int dataIndex)
             {
                 string val = "";
-                DataMutex.WaitOne();
+                if(!DataMutex.WaitOne(1250)) return "";
                 if ((Data != null) && Data.Columns.Contains(Expression) && (Data.Rows.Count > 0))
                 {
                     val = NPlot.Utils.ToDouble(Data.Rows[dataIndex][Expression]).ToString();
@@ -380,7 +383,9 @@ namespace RobinhoodDesktop
                     this.Expression = line.Expression;
                     plotInterface = Plot;
                     PlotYAxis = new Axis();
-                    source.Plot.Add(Plot, XAxisPosition.Bottom, YAxisPosition.Left, 0, null, PlotYAxis);
+                    source.PlotMutex.WaitOne();
+                    source.Plot.Add(Plot, XAxisPosition.Bottom, YAxisPosition.Left, source.Lines.IndexOf(line), null, PlotYAxis);
+                    source.PlotMutex.ReleaseMutex();
                 }
 
                 public override void SetData(DataTable table)
@@ -415,7 +420,9 @@ namespace RobinhoodDesktop
                     this.Expression = line.Expression;
                     plotInterface = Plot;
                     PlotYAxis = new Axis();
-                    source.Plot.Add(Plot, XAxisPosition.Bottom, YAxisPosition.Left, 0, null, PlotYAxis);
+                    source.PlotMutex.WaitOne();
+                    source.Plot.Add(Plot, XAxisPosition.Bottom, YAxisPosition.Left, source.Lines.IndexOf(line), null, PlotYAxis);
+                    source.PlotMutex.ReleaseMutex();
                 }
 
                 public override void SetData(DataTable table)
@@ -473,6 +480,11 @@ namespace RobinhoodDesktop
         /// The plot surface used to display the chart
         /// </summary>
         protected NPlot.Swf.InteractivePlotSurface2D Plot;
+
+        /// <summary>
+        /// Mutex protecting access to the plot
+        /// </summary>
+        protected Mutex PlotMutex = new Mutex();
 
         /// <summary>
         /// The axis used when X is the DateTime
@@ -538,10 +550,10 @@ namespace RobinhoodDesktop
             Plot.YAxis1 = null;
 
             // Re-generate all of the data
-            foreach (var l in Lines)
+            Lines.AsParallel().ForAll((l) =>
             {
                 l.Generate(this);
-            }
+            });
 
             // Select the proper X axis and refresh the plot
             if(XAxis.Equals("Time") && (Lines.Count > 0))
@@ -667,9 +679,11 @@ namespace RobinhoodDesktop
             {
                 if (l.Plot != null)
                 {
-                    l.DataMutex.WaitOne();
-                    l.Plot.UpdateDataMinMax(l.Data);
-                    l.DataMutex.ReleaseMutex();
+                    if (l.DataMutex.WaitOne(1250))
+                    {
+                        l.Plot.UpdateDataMinMax(l.Data);
+                        l.DataMutex.ReleaseMutex();
+                    }
                 }
             }
 
@@ -779,7 +793,7 @@ namespace RobinhoodDesktop
         public int GetDataIndex(double val)
         {
             int idx = -1;
-            if ((Lines.Count > 0) && (Lines[0].Data != null) && Lines[0].DataMutex.WaitOne())
+            if ((Lines.Count > 0) && (Lines[0].Data != null) && Lines[0].Data.Columns.Contains(XAxis) && Lines[0].DataMutex.WaitOne(1500))
             {
                 var src = Lines[0].Data;
                 int min = 0;

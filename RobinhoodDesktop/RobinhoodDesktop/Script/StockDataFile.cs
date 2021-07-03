@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 using Newtonsoft.Json;
 using CSScriptLibrary;
@@ -443,9 +444,7 @@ namespace RobinhoodDesktop.Script
         /// <param name="session">The session this is part of</param>
         public virtual void LoadSegment<T>(StockDataSet<T> segment, StockSession session = null) where T : struct, StockData
         {
-            FileMutex.WaitOne();
             segment.DataSet.Initialize(LoadData<T>(segment.StreamAddress));
-            FileMutex.ReleaseMutex();
         }
 
         /// <summary>
@@ -458,8 +457,10 @@ namespace RobinhoodDesktop.Script
         {
             T[] data = null;
 
+            FileMutex.WaitOne();
             File.Seek(address, SeekOrigin.Begin);
             data = Load<T>(File);
+            FileMutex.ReleaseMutex();
 
             if(data == null) data = new T[0];
             return data;
@@ -501,8 +502,10 @@ namespace RobinhoodDesktop.Script
             {
                 if(t.Item1 == segment.Start)
                 {
+                    FileMutex.WaitOne();
                     File.Seek(t.Item2, SeekOrigin.Begin);
                     count = (File.ReadByte() << 8) | File.ReadByte();
+                    FileMutex.ReleaseMutex();
                     break;
                 }
             }
@@ -567,8 +570,10 @@ namespace RobinhoodDesktop.Script
             }
 
             // Set the offset to the header
+            FileMutex.WaitOne();
             s.Seek(0, SeekOrigin.Begin);
             headerSer.Serialize(s, headerAddress);
+            FileMutex.ReleaseMutex();
         }
 
         /// <summary>
